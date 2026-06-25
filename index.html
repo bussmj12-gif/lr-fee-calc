@@ -352,13 +352,27 @@ function renderVisit() {
   // Min Fee 미달 프로젝트 파악 후 §3.6 분할 재계산
   const minFeeProjs = visitProjects.filter(p=>p.isMinFee);
   const n = minFeeProjs.length;
-  const split = splitMinFee(n);
+  const split = splitMinFee(n);  // §3.6 분할 후 최소 보장액
   const totalMult = Math.ceil(n/3);
 
   // 최종 각 프로젝트 청구액 계산
+  // §3.6: Split Fee는 최소 보장액 — Actual Fee가 Split Fee보다 크면 Actual Fee 적용
   let grandTotal = 0;
   visitProjects.forEach(p => {
-    p.finalProductFee = p.isMinFee ? split : p.rawProductFee;
+    if(!p.isMinFee) {
+      // Min Fee 초과 프로젝트 → Actual Fee 그대로
+      p.finalProductFee = p.rawProductFee;
+      p.splitApplied = false;
+    } else {
+      // Min Fee 미달 → Actual Fee vs Split Fee 중 큰 값 적용
+      if(p.rawProductFee > split) {
+        p.finalProductFee = p.rawProductFee;
+        p.splitApplied = false;
+      } else {
+        p.finalProductFee = split;
+        p.splitApplied = true;
+      }
+    }
     p.finalTotal = p.finalProductFee + p.zoneAmt;
     grandTotal += p.finalTotal;
   });
@@ -377,7 +391,7 @@ function renderVisit() {
     <div class="project-card">
       <button class="pc-del" onclick="removeProject(${i})">×</button>
       <div class="pc-header">
-        <div class="pc-title">Section ${p.secId} · ${p.secName}</div>
+        <div class="pc-title"><span style="display:inline-block;background:var(--primary);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px;margin-right:6px;">${i+1}</span>Section ${p.secId} · ${p.secName}</div>
         <div class="pc-fee">KRW ${Math.round(p.finalTotal).toLocaleString()}</div>
       </div>
       <div class="pc-detail">
@@ -385,14 +399,16 @@ function renderVisit() {
         ${p.zoneAmt>0?' · Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString():''}
         ${p.isRemote?' · Remote +10%':''}
       </div>
-      ${p.isMinFee?`<div class="pc-minfee">⚠ Min Fee 분할 적용 (원래 KRW ${Math.round(p.rawProductFee).toLocaleString()})</div>`:''}
+      ${p.isMinFee && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Split 적용 (Actual KRW '+Math.round(p.rawProductFee).toLocaleString()+' → KRW '+Math.round(p.finalProductFee).toLocaleString()+')</div>' : ''}
+      ${p.isMinFee && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee (Split 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
       ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
     </div>`).join('');
 
   // Min fee note
+  const actualSplitApplied = visitProjects.filter(p=>p.splitApplied).length;
   if(n>1) {
     noteEl.style.display='';
-    noteEl.innerHTML=`<div class="warn-box">§3.6 Min Fee 분할 적용: Min Fee × ${totalMult}배 (KRW ${(totalMult*MIN_FEE).toLocaleString()}) ÷ ${n}개 = 프로젝트당 KRW ${Math.round(split).toLocaleString()}</div>`;
+    noteEl.innerHTML=`<div class="warn-box">§3.6 Min Fee 분할: Min Fee × ${totalMult}배 (KRW ${(totalMult*MIN_FEE).toLocaleString()}) ÷ ${n}개 = 보장 하한 KRW ${Math.round(split).toLocaleString()} / 프로젝트<br><small>Actual Fee가 보장 하한보다 크면 Actual Fee가 적용됩니다.</small></div>`;
   } else {
     noteEl.style.display='none';
   }
