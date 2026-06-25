@@ -530,22 +530,35 @@ const SECTIONS = [
   { id:'4.5', name:'Testing / Retesting / Validation of Materials',
     products:['Material Testing','Heat Number','Charge Number','Retesting','Transfer of Marks','Lab Attendance'],
     unit:'Heat Number', noSplit:true,
-    note:'※ Small cut-out (1톤 미만 소량 시편): 1 project 내 max 5 heat number까지 550 FU 고정 적용.',
+    note:'※ Small cut-out: 총 중량 1톤 미만 AND Heat Number 5개 이하 → Min Fee(KRW 884,400) 적용. 어느 하나라도 초과하면 일반 요율(550 + (n-1)×150 FU) 적용.',
     inputs:[
       {id:'testType',type:'select',label:'검사 유형',options:[
         {val:'normal',label:'일반 Testing/Retesting (1st heat: 550 FU, 추가 heat: +150 FU)'},
-        {val:'small',label:'Small cut-out below 1-ton (max 5 heat number) – 550 FU 고정'},
+        {val:'small',label:'Small cut-out (중량 1톤 미만 + Heat ≤5개 → Min Fee 적용)'},
       ]},
-      {id:'qty',type:'number',label:'Heat Number 수량',placeholder:'예: 3'},
-      {id:'wt',type:'number',label:'총 중량 (ton) — 참고용',placeholder:'예: 0.5'},
+      {id:'qty',type:'number',label:'Heat Number 수량',placeholder:'예: 3 (Small cut-out: 최대 5)'},
+      {id:'wt',type:'number',label:'총 중량 (ton)',placeholder:'예: 0.5 (Small cut-out: 1톤 미만)'},
       {id:'mat',type:'select',label:'재질 특약',options:[{val:'none',label:'Carbon Steel'},{val:'ss',label:'Stainless Steel (+20%)'},{val:'cu',label:'Copper Alloy (+20%)'},{val:'alloy',label:'Alloy Steel (+30%)'},{val:'al',label:'Aluminium (+40%)'},{val:'fg',label:'Forgings (+20%)'},{val:'cs',label:'Castings (+20%)'}]},
     ],
     calcFn:function(v){
-      if(v.testType==='small') return 550;
       const n=Math.max(1,parseInt(v.qty)||1);
+      const wt=parseFloat(v.wt)||0;
+      if(v.testType==='small'){
+        // 두 조건 모두 충족: 중량 < 1.0ton AND heat ≤ 5개 → Min Fee
+        if(wt < 1.0 && n <= 5){
+          return MIN_FEE/FF;  // Min Fee를 FU로 역산
+        }
+        // 조건 초과 시 → 일반 요율 적용
+      }
       return n===1?550:550+(n-1)*150;
     },
-    calcModFn:function(v,fu){ let m=1; if(v.mat==='ss'||v.mat==='cu'||v.mat==='fg'||v.mat==='cs')m*=1.20; if(v.mat==='alloy')m*=1.30; if(v.mat==='al')m*=1.40; return fu*m; }
+    calcModFn:function(v,fu){
+      let m=1;
+      if(v.mat==='ss'||v.mat==='cu'||v.mat==='fg'||v.mat==='cs')m*=1.20;
+      if(v.mat==='alloy')m*=1.30;
+      if(v.mat==='al')m*=1.40;
+      return fu*m;
+    }
   },
   { id:'4.6', name:'Pipe & Tube (Seamless/Welded/Stainless Steel)',
     products:['Seamless Pipe','Welded Pipe','Stainless Steel Pipe','Tube','Pipe'],
