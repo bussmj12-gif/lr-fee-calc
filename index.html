@@ -929,16 +929,27 @@ const SECTIONS = [
     calcFn:function(v){ const q=parseInt(v.qty)||1; const m={th:275,te:420,boat:495,mooring:595,cargo:615,heavy:1185}; return (m[v.winchType]||615)*q; }
   },
   // ── Chapter 10 Machinery ─────────────────────────────────────
-  { id:'10.1', name:'Pumps',
+  { id:'10.1', name:'Pumps', multi:true,
     products:['Pump','Centrifugal Pump','Gear Pump','Hydraulic Pump','Screw Pump','Displacement Pump','Dynamic Pump'],
     unit:'Flow Rate (m³/hr)',
-    inputs:[
-      {id:'pumpType',type:'select',label:'펌프 유형',options:[{val:'disp',label:'Displacement Pump'},{val:'dynamic',label:'Dynamic Pump (×1.2)'},{val:'hydraulic',label:'Hydraulic Pump (×1.5)'}]},
-      {id:'qty',type:'number',label:'Flow Rate (m³/hr)',placeholder:'예: 100'},
-      {id:'cryo',type:'select',label:'극저온',options:[{val:'no',label:'일반'},{val:'yes',label:'Cryogenic (×2)'}]},
+    note:'※ 여러 대인 경우 각 펌프의 FU를 개별 계산 후 합산합니다.',
+    multiFields:[
+      {id:'pumpType',type:'select',label:'펌프 유형',w:'1.8fr',options:[{v:'disp',l:'Displacement Pump'},{v:'dynamic',l:'Dynamic Pump (×1.2)'},{v:'hydraulic',l:'Hydraulic Pump (×1.5)'}]},
+      {id:'flow',type:'number',label:'Flow Rate(m³/hr)',w:'1.1fr',placeholder:'예: 100'},
+      {id:'qty',type:'number',label:'수량',w:'0.5fr',placeholder:'1'},
+      {id:'cryo',type:'select',label:'Cryogenic',w:'0.9fr',options:[{v:'no',l:'일반'},{v:'yes',l:'×2'}]},
     ],
-    calcFn:function(v){ const c=v.qty||1; const b=25+70*Math.pow(c,1/3); return{disp:b,dynamic:b*1.2,hydraulic:b*1.5}[v.pumpType]||b; },
-    calcModFn:function(v,fu){ return v.cryo==='yes'?fu*2:fu; }
+    multiCalcFn:function(v){
+      const c=parseFloat(v.flow)||1;
+      const b=25+70*Math.pow(c,1/3);
+      let fu={disp:b,dynamic:b*1.2,hydraulic:b*1.5}[v.pumpType]||b;
+      if(v.cryo==='yes') fu*=2;
+      return fu*(parseInt(v.qty)||1);
+    },
+    multiLabelFn:function(v){
+      const t={disp:'Displacement',dynamic:'Dynamic',hydraulic:'Hydraulic'};
+      return `${t[v.pumpType]||v.pumpType} ${v.flow||0}m³/hr ×${v.qty||1}${v.cryo==='yes'?' [Cryo]':''}`;
+    }
   },
   { id:'10.3', name:'Reciprocating Air Compressors',
     products:['Reciprocating Compressor','Air Compressor','Starting Air Compressor','Piston Compressor'],
