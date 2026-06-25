@@ -781,7 +781,7 @@ const SECTIONS = [
       {id:'diam',type:'select',label:'체인 직경',options:[{val:'100',label:'≤100mm – 330 FU/ea'},{val:'200',label:'≤200mm – 400 FU/ea'},{val:'200p',label:'>200mm – 500 FU/ea'},{val:'clench',label:'Chain Cable Clench – 30 FU/ea'}]},
       {id:'qty',type:'number',label:'수량',placeholder:'예: 2'},
     ],
-    calcFn:function(v){ const q=parseInt(v.qty)||1; const m={100:330,200:400,200p:500,clench:30}; return (m[v.diam]||330)*q; }
+    calcFn:function(v){ const q=parseInt(v.qty)||1; const m={'100':330,'200':400,'200p':500,'clench':30}; return (m[v.diam]||330)*q; }
   },
   // ── Chapter 9 Lifting ────────────────────────────────────────
   { id:'9.1', name:'Shipboard Crane – Gantry Cranes',
@@ -1329,6 +1329,17 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
   const previewFee = isMin ? MIN_FEE : rawFee;
   const previewTotal = previewFee + zoneAmt;
 
+  window._pendingProject = {
+    secId: s.id,
+    secName: s.name,
+    rawProductFee: Math.round(previewFee),
+    zoneAmt: zoneAmt,
+    zone: zone,
+    isRemote: isRemote,
+    isMinFee: isMin,
+    linesSummary: linesSummary
+  };
+
   document.getElementById('resultArea').innerHTML = `
     <div class="card">
       <div class="card-title">계산 결과 · Section ${s.id}</div>
@@ -1345,10 +1356,16 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
       </div>
       ${isMin?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
       <div class="btn-group">
-        <button class="btn btn-primary" onclick="addToVisit({secId:'${s.id}',secName:'${s.name.replace(/'/g,"\\'")}',rawProductFee:${Math.round(previewFee)},zoneAmt:${zoneAmt},zone:'${zone}',isRemote:${isRemote},isMinFee:${isMin},linesSummary:'${linesSummary.replace(/'/g,"\\'")}'})" style="flex:2">방문 목록에 추가</button>
+        <button class="btn btn-primary" onclick="addPendingToVisit()" style="flex:2">방문 목록에 추가</button>
         <button class="btn btn-sec" onclick="showCalc()" style="flex:1">수치 수정</button>
       </div>
     </div>`;
+}
+
+function addPendingToVisit() {
+  if(window._pendingProject) {
+    addToVisit(window._pendingProject);
+  }
 }
 </script>
 </body>
