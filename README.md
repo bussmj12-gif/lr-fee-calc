@@ -1,1 +1,1355 @@
-# lr-fee-calc
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LR MEC 검사비 계산기 — Busan Port</title>
+<style>
+:root {
+  --bg: #f8f9fa;
+  --card: #ffffff;
+  --border: #e2e6ea;
+  --border2: #ced4da;
+  --text: #212529;
+  --text2: #6c757d;
+  --text3: #adb5bd;
+  --primary: #0a5c9e;
+  --primary-light: #e8f0fa;
+  --success: #198754;
+  --success-light: #d1e7dd;
+  --warning: #fd7e14;
+  --warning-light: #fff3cd;
+  --danger: #dc3545;
+  --danger-light: #f8d7da;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+.container { max-width: 780px; margin: 0 auto; padding: 20px 16px 60px; }
+
+/* Header */
+.app-header { background: var(--primary); color: #fff; padding: 14px 20px; border-radius: var(--radius); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+.app-header .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.app-header .info { font-size: 12px; opacity: .8; }
+
+/* Steps */
+.steps { display: flex; margin-bottom: 20px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.step { flex: 1; padding: 10px 6px; text-align: center; font-size: 12px; background: #fff; color: var(--text2); border-right: 1px solid var(--border); cursor: default; }
+.step:last-child { border-right: none; }
+.step.active { background: var(--primary); color: #fff; font-weight: 600; }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.card-sub { font-size: 12px; color: var(--text2); margin-bottom: 14px; }
+
+/* Search */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-wrap input { width: 100%; padding: 11px 14px 11px 40px; font-size: 15px; border: 1px solid var(--border2); border-radius: var(--radius); background: #fff; color: var(--text); }
+.search-wrap input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(10,92,158,.12); }
+.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 16px; }
+
+/* Result items */
+.result-item { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; cursor: pointer; margin-bottom: 8px; transition: border-color .15s, box-shadow .15s; }
+.result-item:hover { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(10,92,158,.1); }
+.result-item .sec-id { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+.result-item .sec-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.result-item .sec-tags { font-size: 11px; color: var(--text2); margin-top: 3px; }
+.badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: 600; }
+.badge-multi { background: var(--success-light); color: var(--success); }
+.badge-special { background: var(--warning-light); color: var(--warning); }
+
+/* Form */
+label { font-size: 12px; color: var(--text2); display: block; margin: 10px 0 3px; font-weight: 500; }
+select, input[type=number] { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: #fff; color: var(--text); }
+select:focus, input[type=number]:focus { outline: none; border-color: var(--primary); }
+
+/* Multi rows */
+.multi-header { display: grid; gap: 6px; margin-bottom: 4px; }
+.multi-header > div { font-size: 11px; color: var(--text2); font-weight: 600; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.multi-row { display: grid; gap: 6px; margin-bottom: 6px; align-items: center; }
+.del-btn { width: 28px; height: 32px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: #fff; color: var(--text2); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.del-btn:hover { background: var(--danger-light); color: var(--danger); border-color: var(--danger); }
+.add-row-btn { width: 100%; padding: 8px; font-size: 13px; border: 1px dashed var(--border2); border-radius: var(--radius-sm); background: transparent; color: var(--text2); cursor: pointer; margin-top: 4px; }
+.add-row-btn:hover { background: var(--bg); color: var(--text); }
+
+/* Buttons */
+.btn { padding: 9px 18px; font-size: 14px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; border: none; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { opacity: .9; }
+.btn-sec { background: #fff; color: var(--text); border: 1px solid var(--border2); }
+.btn-sec:hover { background: var(--bg); }
+.btn-danger { background: var(--danger-light); color: var(--danger); border: 1px solid #f5c6cb; }
+.btn-group { display: flex; gap: 8px; margin-top: 14px; }
+.btn-group .btn { flex: 1; }
+
+/* Info / hint boxes */
+.info-box { font-size: 12px; color: var(--text2); padding: 9px 12px; background: var(--primary-light); border-radius: var(--radius-sm); margin-top: 10px; border-left: 3px solid var(--primary); line-height: 1.7; }
+.warn-box { font-size: 12px; padding: 9px 12px; background: var(--warning-light); border-radius: var(--radius-sm); margin-top: 10px; border-left: 3px solid var(--warning); color: #664d03; line-height: 1.7; }
+.hint { font-size: 12px; color: var(--text2); padding: 7px 11px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 12px; border: 1px solid var(--border); }
+.sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* Results */
+.result-card { background: var(--bg); border-radius: var(--radius); padding: 14px; margin-top: 12px; border: 1px solid var(--border); }
+.rrow { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.rrow:last-child { border-bottom: none; }
+.rrow .lbl { color: var(--text2); flex: 1; padding-right: 8px; }
+.rrow .val { color: var(--text); font-weight: 600; white-space: nowrap; }
+.rrow.total .lbl { font-size: 15px; color: var(--text); font-weight: 700; }
+.rrow.total .val { font-size: 22px; color: var(--primary); }
+.rrow.warn .lbl, .rrow.warn .val { color: var(--warning); }
+.rrow.indent .lbl { padding-left: 14px; font-size: 11px; }
+.rrow.indent .val { font-size: 11px; }
+
+/* Line table */
+.line-tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
+.line-tbl th { text-align: left; padding: 5px 8px; background: var(--bg); color: var(--text2); font-weight: 600; border-bottom: 1px solid var(--border); }
+.line-tbl td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+.line-tbl tr:last-child td { border-bottom: none; }
+
+/* Visit history */
+.visit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.visit-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.visit-summary { background: var(--primary); color: #fff; border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px; }
+.visit-summary .vs-title { font-size: 12px; opacity: .8; margin-bottom: 4px; }
+.visit-summary .vs-total { font-size: 22px; font-weight: 700; }
+.visit-summary .vs-detail { font-size: 12px; opacity: .8; margin-top: 4px; }
+.project-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; background: #fff; position: relative; }
+.project-card .pc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.project-card .pc-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.project-card .pc-fee { font-size: 14px; font-weight: 700; color: var(--primary); }
+.project-card .pc-detail { font-size: 11px; color: var(--text2); }
+.project-card .pc-minfee { font-size: 11px; color: var(--warning); font-weight: 600; }
+.project-card .pc-del { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border: 1px solid var(--border2); border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; color: var(--text2); }
+.project-card .pc-del:hover { background: var(--danger-light); color: var(--danger); }
+
+.back-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text2); background: none; border: none; cursor: pointer; margin-bottom: 14px; padding: 0; }
+.back-btn:hover { color: var(--text); }
+.empty-msg { text-align: center; padding: 30px; color: var(--text2); font-size: 13px; }
+.tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 10px; background: var(--primary-light); color: var(--primary); margin: 2px; }
+
+/* two-col grid */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 500px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="app-header">
+    <div>
+      <div class="logo">LR MEC 검사비 계산기</div>
+      <div class="info">South Korea · Fee Factor KRW 1,225.8 · Min Fee KRW 884,400 · Busan Port Internal Use</div>
+    </div>
+  </div>
+
+  <!-- VISIT HISTORY PAGE -->
+  <div id="pageVisit">
+    <div class="visit-header">
+      <div class="visit-title">이번 방문 프로젝트</div>
+      <button class="btn btn-primary" onclick="goSearch()" style="font-size:13px;padding:7px 14px;">+ 프로젝트 추가</button>
+    </div>
+    <div id="visitSummary" style="display:none"></div>
+    <div id="projectList"><p class="empty-msg">아직 추가된 프로젝트가 없습니다.<br>상단 버튼을 눌러 검사비를 계산하세요.</p></div>
+    <div id="visitMinFeeNote" style="display:none"></div>
+  </div>
+
+  <!-- SEARCH PAGE -->
+  <div id="pageSearch" style="display:none">
+    <button class="back-btn" onclick="showVisit()">← 방문 목록으로</button>
+    <div class="steps">
+      <div class="step active">① 제품 검색</div>
+      <div class="step">② 섹션 선택</div>
+      <div class="step">③ 수치 입력</div>
+      <div class="step">④ 결과</div>
+    </div>
+    <div class="card">
+      <div class="card-title">제품 / 섹션 검색</div>
+      <div class="card-sub">제품명 또는 섹션 번호를 입력하세요.</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="예: valve, 12.6, AMP, BOG, heat exchanger, angle..." oninput="doSearch(this.value)" autocomplete="off">
+      </div>
+      <div class="hint">💡 <b style="color:var(--success)">다중</b> 배지 섹션은 여러 항목을 한 번에 계산합니다.</div>
+      <div id="searchResults"><p class="empty-msg">검색어를 입력하세요.</p></div>
+    </div>
+  </div>
+
+  <!-- SECTION DETAIL PAGE -->
+  <div id="pageSection" style="display:none">
+    <button class="back-btn" onclick="showSearch()">← 검색으로</button>
+    <div class="steps">
+      <div class="step">① 제품 검색</div>
+      <div class="step active">② 섹션 선택</div>
+      <div class="step">③ 수치 입력</div>
+      <div class="step">④ 결과</div>
+    </div>
+    <div id="sectionDetail"></div>
+  </div>
+
+  <!-- CALC PAGE -->
+  <div id="pageCalc" style="display:none">
+    <button class="back-btn" onclick="showSection()">← 섹션으로</button>
+    <div class="steps">
+      <div class="step">① 제품 검색</div>
+      <div class="step">② 섹션 선택</div>
+      <div class="step active">③ 수치 입력</div>
+      <div class="step">④ 결과</div>
+    </div>
+    <div id="calcArea"></div>
+  </div>
+
+  <!-- RESULT PAGE -->
+  <div id="pageResult" style="display:none">
+    <button class="back-btn" onclick="showCalc()">← 수치 수정</button>
+    <div class="steps">
+      <div class="step">① 제품 검색</div>
+      <div class="step">② 섹션 선택</div>
+      <div class="step">③ 수치 입력</div>
+      <div class="step active">④ 결과</div>
+    </div>
+    <div id="resultArea"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+const FF = 1225.8;
+const MIN_FEE = 884400;
+const ZONES = { A:202700, B:474627, C:746726, D:1018710, E:1290809, F:0, none:0 };
+
+// ═══════════════════════════════════════════════════════════════
+// FEE CALCULATION HELPERS
+// ═══════════════════════════════════════════════════════════════
+function motorFU(p) {
+  const t=[{m:100,f:700},{m:125,f:800},{m:150,f:850},{m:175,f:900},{m:200,f:950},{m:250,f:1000},{m:325,f:1050},{m:400,f:1100},{m:475,f:1150},{m:550,f:1200},{m:625,f:1250},{m:700,f:1300},{m:775,f:1350},{m:850,f:1400},{m:925,f:1450},{m:1000,f:1500},{m:1100,f:1575},{m:1200,f:1650},{m:1300,f:1725},{m:1400,f:1800},{m:1500,f:1875},{m:1600,f:1950},{m:1700,f:2025},{m:1800,f:2100},{m:1900,f:2175},{m:2000,f:2250},{m:2200,f:2325},{m:2400,f:2400},{m:2600,f:2475},{m:2800,f:2550},{m:3000,f:2625},{m:3200,f:2700},{m:3400,f:2775},{m:3600,f:2850},{m:3800,f:2925},{m:4000,f:3000},{m:4200,f:3075},{m:4400,f:3150},{m:4600,f:3225},{m:4800,f:3300},{m:5000,f:3375},{m:5200,f:3450},{m:5400,f:3525},{m:5600,f:3600},{m:5800,f:3675},{m:6000,f:3750},{m:6200,f:3825},{m:6400,f:3900},{m:6600,f:3975},{m:6800,f:4050},{m:7000,f:4125},{m:7200,f:4200},{m:7400,f:4275},{m:7600,f:4350},{m:7800,f:4425},{m:8000,f:4500},{m:8200,f:4575},{m:8400,f:4650},{m:8600,f:4725},{m:8800,f:4800},{m:9000,f:4875},{m:9200,f:4950},{m:9400,f:5025},{m:9600,f:5100},{m:9800,f:5175},{m:10000,f:5250},{m:10200,f:5325}];
+  for(const r of t) if(p<=r.m) return r.f;
+  return 5325+75*Math.ceil((p-10200)/200);
+}
+function swbFU(p) {
+  const t=[{m:100,f:210},{m:200,f:420},{m:300,f:630},{m:400,f:840},{m:500,f:1050},{m:700,f:1100},{m:1000,f:1800},{m:1500,f:2150},{m:2000,f:2500},{m:2500,f:2800},{m:3000,f:3100},{m:3500,f:3550},{m:4000,f:4000},{m:4500,f:4350},{m:5000,f:4700},{m:5500,f:4850},{m:6000,f:5000},{m:6500,f:5150},{m:7000,f:5300},{m:7500,f:5450},{m:8000,f:5600},{m:8500,f:5750},{m:9000,f:5900},{m:9500,f:6050},{m:10000,f:6200},{m:10500,f:6300},{m:11000,f:6400},{m:11500,f:6500},{m:12000,f:6600},{m:12500,f:6700},{m:13000,f:6800},{m:13500,f:6900},{m:14000,f:7000},{m:14500,f:7100},{m:15000,f:7200},{m:15500,f:7300},{m:16000,f:7400},{m:16500,f:7500},{m:17000,f:7600},{m:17500,f:7700},{m:18000,f:7800},{m:18500,f:7900},{m:19000,f:8000},{m:19500,f:8100},{m:20000,f:8200}];
+  for(const r of t) if(p<=r.m) return r.f;
+  return 8200+16*Math.ceil((p-20000)/100);
+}
+function starterFU(p) {
+  const t=[{m:50,f:121},{m:100,f:242},{m:200,f:485},{m:300,f:728},{m:400,f:840},{m:500,f:953},{m:600,f:1002},{m:700,f:1050},{m:800,f:1100},{m:900,f:1150},{m:1000,f:1200},{m:1100,f:1230},{m:1200,f:1260},{m:1300,f:1290},{m:1400,f:1320},{m:1500,f:1350},{m:1600,f:1395},{m:1700,f:1440},{m:1800,f:1485},{m:1900,f:1530},{m:2000,f:1575},{m:2200,f:1627},{m:2400,f:1679},{m:2600,f:1727},{m:2800,f:1775},{m:3000,f:1823},{m:3500,f:1943},{m:4000,f:2063},{m:4500,f:2190},{m:5000,f:2310},{m:5500,f:2430},{m:6000,f:2550},{m:6500,f:2663},{m:7000,f:2775},{m:7500,f:2888},{m:8000,f:3000},{m:8500,f:3098},{m:9000,f:3188},{m:9500,f:3285},{m:10000,f:3375}];
+  for(const r of t) if(p<=r.m) return r.f;
+  return 3375;
+}
+function mainEngFU(p) {
+  if(p<=100) return 1500;
+  if(p<=200) return 1500+Math.ceil((p-100)/50)*796.12;
+  const a200=3184.47; if(p<=1000) return a200+Math.ceil((p-200)/100)*796.12;
+  const a1k=9553.4; if(p<=3000) return a1k+Math.ceil((p-1000)/200)*796.12;
+  const a3k=17514.56; if(p<=5000) return a3k+Math.ceil((p-3000)/250)*796.12;
+  const a5k=23883.5; if(p<=10000) return a5k+Math.ceil((p-5000)/500)*796.12;
+  const a10k=31844.66; if(p<=26000) return a10k+Math.ceil((p-10000)/500)*995.15;
+  return 63689.32+Math.ceil((p-26000)/500)*995.15;
+}
+function auxEngFU(p) { return p<=50?1200:mainEngFU(p); }
+function emergEngFU(p) {
+  if(p<=50) return 1000;
+  if(p<=200) return 1000+Math.ceil((p-50)/50)*716.5;
+  const a200=2866.02; if(p<=1000) return a200+Math.ceil((p-200)/100)*716.5;
+  const a1k=8598.06; if(p<=3000) return a1k+Math.ceil((p-1000)/200)*716.5;
+  const a3k=15763.11; if(p<=5000) return a3k+Math.ceil((p-3000)/250)*716.5;
+  const a5k=21495.15; if(p<=10000) return a5k+Math.ceil((p-5000)/500)*716.5;
+  return 28660.19+Math.ceil((p-10000)/500)*895.63;
+}
+function upvFU(v, cls) {
+  const rows=[{m:500,c1:216,c2:180.25,c3:162,al:234},{m:1000,c1:433,c2:360.5,c3:324,al:469},{m:2000,c1:865,c2:721,c3:649,al:937},{m:5000,c1:2100,c2:1750,c3:1575,al:2275},{m:10000,c1:2767,c2:2306,c3:2075,al:2998},{m:15000,c1:3566,c2:2972,c3:2675,al:3864},{m:20000,c1:4367,c2:3639,c3:3275,al:4731},{m:25000,c1:5366,c2:4472,c3:4025,al:5814},{m:30000,c1:6360,c2:5300,c3:4770,al:6890}];
+  const k={class1:'c1',class2:'c2',class3:'c3',alloy:'al'}[cls]||'c1';
+  for(const r of rows) if(v<=r.m) return r[k];
+  const base={class1:6360,class2:5300,class3:4770,alloy:6890}[cls]||6360;
+  const inc={class1:200,class2:167,class3:150,alloy:217}[cls]||200;
+  return base+inc*Math.ceil((v-30000)/1000);
+}
+function plateTHXFU(a) {
+  const t=[{m:5,f:50},{m:10,f:100},{m:15,f:150},{m:20,f:200},{m:50,f:285},{m:100,f:390},{m:300,f:600},{m:500,f:845},{m:700,f:950},{m:900,f:1064},{m:1100,f:1192},{m:1300,f:1335},{m:1500,f:1495},{m:1700,f:1674},{m:1900,f:1875},{m:2100,f:2100},{m:2300,f:2352},{m:2500,f:2634},{m:2700,f:2951},{m:2900,f:3305},{m:3100,f:3701},{m:3300,f:4145},{m:3500,f:4643},{m:3700,f:5200},{m:3900,f:5824},{m:4100,f:6523},{m:4300,f:7305},{m:4500,f:8182},{m:4700,f:9164},{m:4900,f:10264},{m:5100,f:11495}];
+  for(const r of t) if(a<=r.m) return r.f;
+  return 11495;
+}
+function shellTHXFU(a) {
+  const t=[{m:5,f:123},{m:10,f:245},{m:15,f:367},{m:20,f:490},{m:50,f:720},{m:100,f:1000},{m:300,f:1260},{m:500,f:1907},{m:700,f:2141},{m:1000,f:2693},{m:1500,f:3479},{m:2000,f:4265},{m:2500,f:5051},{m:3000,f:5837},{m:3500,f:6623},{m:4000,f:7409},{m:4500,f:8195},{m:5000,f:8981},{m:5500,f:9767},{m:6000,f:10553},{m:6500,f:11339},{m:7000,f:12125},{m:7500,f:12911},{m:8000,f:13697},{m:8500,f:14483},{m:9000,f:15269},{m:9500,f:16055},{m:10000,f:16841}];
+  for(const r of t) if(a<=r.m) return r.f;
+  return 16841;
+}
+function valveFU(bore, type) {
+  const t=[{m:40,ord:15,ss:18,func:22.5},{m:100,ord:25,ss:30,func:37.5},{m:150,ord:30,ss:36,func:45},{m:200,ord:35,ss:42,func:52.5},{m:250,ord:40,ss:48,func:60},{m:300,ord:50,ss:60,func:75},{m:500,ord:60,ss:72,func:90},{m:700,ord:80,ss:96,func:120},{m:1000,ord:110,ss:132,func:165},{m:1300,ord:150,ss:180,func:225}];
+  for(const r of t) if(bore<=r.m) return r[type]||r.ord;
+  const b={ord:150,ss:180,func:225}[type]||150;
+  const e={ord:40,ss:48,func:60}[type]||40;
+  return b+e*Math.ceil((bore-1300)/300);
+}
+function bogFU(c) {
+  const t=[{m:40,f:466},{m:60,f:926},{m:100,f:1243},{m:150,f:1414},{m:200,f:1596},{m:250,f:1773},{m:300,f:2049},{m:400,f:2350},{m:500,f:2623},{m:600,f:2878},{m:700,f:3107},{m:800,f:3328},{m:900,f:3549},{m:1000,f:3718},{m:1200,f:4079},{m:1500,f:4560},{m:2000,f:5242},{m:2500,f:6443},{m:10000,f:7275}];
+  for(const r of t) if(c<=r.m) return r.f;
+  return 7275+100*Math.ceil((c-10000)/1000);
+}
+function matMult(mat) {
+  if(mat==='ss'||mat==='cu') return 1.20;
+  if(mat==='alloy') return 1.30;
+  if(mat==='al') return 1.40;
+  return 1;
+}
+// §3.6 Min Fee split
+function splitMinFee(n) {
+  if(n<=0) n=1;
+  return (Math.ceil(n/3)*MIN_FEE)/n;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VISIT STATE
+// ═══════════════════════════════════════════════════════════════
+let visitProjects = [];
+let currentSection = null;
+let multiRowCnt = 0;
+
+function showVisit() {
+  hide(['pageSearch','pageSection','pageCalc','pageResult']);
+  show('pageVisit');
+  renderVisit();
+}
+function goSearch() {
+  hide(['pageVisit','pageSection','pageCalc','pageResult']);
+  show('pageSearch');
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchResults').innerHTML='<p class="empty-msg">검색어를 입력하세요.</p>';
+}
+function showSearch() {
+  hide(['pageVisit','pageSection','pageCalc','pageResult']);
+  show('pageSearch');
+}
+function showSection() {
+  hide(['pageVisit','pageSearch','pageCalc','pageResult']);
+  show('pageSection');
+}
+function showCalc() {
+  hide(['pageVisit','pageSearch','pageSection','pageResult']);
+  show('pageCalc');
+}
+function hide(ids) { ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; }); }
+function show(id) { const el=document.getElementById(id); if(el) el.style.display=''; }
+
+// ═══════════════════════════════════════════════════════════════
+// VISIT RENDERING
+// ═══════════════════════════════════════════════════════════════
+function renderVisit() {
+  const list = document.getElementById('projectList');
+  const summary = document.getElementById('visitSummary');
+  const noteEl = document.getElementById('visitMinFeeNote');
+
+  if(!visitProjects.length) {
+    list.innerHTML='<p class="empty-msg">아직 추가된 프로젝트가 없습니다.<br>상단 버튼을 눌러 검사비를 계산하세요.</p>';
+    summary.style.display='none';
+    noteEl.style.display='none';
+    return;
+  }
+
+  // Min Fee 미달 프로젝트 파악 후 §3.6 분할 재계산
+  const minFeeProjs = visitProjects.filter(p=>p.isMinFee);
+  const n = minFeeProjs.length;
+  const split = splitMinFee(n);
+  const totalMult = Math.ceil(n/3);
+
+  // 최종 각 프로젝트 청구액 계산
+  let grandTotal = 0;
+  visitProjects.forEach(p => {
+    p.finalProductFee = p.isMinFee ? split : p.rawProductFee;
+    p.finalTotal = p.finalProductFee + p.zoneAmt;
+    grandTotal += p.finalTotal;
+  });
+
+  // Summary
+  summary.style.display='';
+  summary.innerHTML=`
+    <div class="visit-summary">
+      <div class="vs-title">이번 방문 총 청구 예정액</div>
+      <div class="vs-total">KRW ${Math.round(grandTotal).toLocaleString()}</div>
+      <div class="vs-detail">프로젝트 ${visitProjects.length}개 · Min Fee 미달 ${n}개${n>1?' (§3.6 분할 적용)':''}</div>
+    </div>`;
+
+  // Project cards
+  list.innerHTML = visitProjects.map((p,i)=>`
+    <div class="project-card">
+      <button class="pc-del" onclick="removeProject(${i})">×</button>
+      <div class="pc-header">
+        <div class="pc-title">Section ${p.secId} · ${p.secName}</div>
+        <div class="pc-fee">KRW ${Math.round(p.finalTotal).toLocaleString()}</div>
+      </div>
+      <div class="pc-detail">
+        Product Fee: KRW ${Math.round(p.finalProductFee).toLocaleString()}
+        ${p.zoneAmt>0?' · Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString():''}
+        ${p.isRemote?' · Remote +10%':''}
+      </div>
+      ${p.isMinFee?`<div class="pc-minfee">⚠ Min Fee 분할 적용 (원래 KRW ${Math.round(p.rawProductFee).toLocaleString()})</div>`:''}
+      ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
+    </div>`).join('');
+
+  // Min fee note
+  if(n>1) {
+    noteEl.style.display='';
+    noteEl.innerHTML=`<div class="warn-box">§3.6 Min Fee 분할 적용: Min Fee × ${totalMult}배 (KRW ${(totalMult*MIN_FEE).toLocaleString()}) ÷ ${n}개 = 프로젝트당 KRW ${Math.round(split).toLocaleString()}</div>`;
+  } else {
+    noteEl.style.display='none';
+  }
+}
+
+function removeProject(i) {
+  visitProjects.splice(i,1);
+  renderVisit();
+}
+
+function addToVisit(project) {
+  visitProjects.push(project);
+  renderVisit();
+  showVisit();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTIONS DATA
+// ═══════════════════════════════════════════════════════════════
+const SECTIONS = [
+  // ── Chapter 4 Materials ──────────────────────────────────────
+  { id:'4.1', name:'Rolled & Extruded Metal Products',
+    products:['Rolled Steel','Steel Plate','Steel Coil','Coil','Extruded Sections','Profiles','Stiffener','Flat Bar','Round Bar','Bulb Flat','H-Beam','I-Beam','T-Bar','Equal Angle','Unequal Angle','(un)equal angle','Aluminium','Angle'],
+    unit:'Weight (Ton)',
+    inputs:[
+      {id:'matType',type:'select',label:'재료 종류',options:[
+        {val:'10.10',label:'Industrial Structural Steel (S235/S275/S355 등) – 10.10 FU/ton'},
+        {val:'13.01',label:'Normal Strength Ship Steel (Grade A-E) – 13.01 FU/ton'},
+        {val:'14.56',label:'Higher Strength Ship Steel (AH/DH/EH/FH) – 14.56 FU/ton'},
+        {val:'34.47',label:'Austenitic & Duplex Stainless Steel – 34.47 FU/ton'},
+        {val:'15.83',label:'Low Temp / Hi-Mn / Hi-Nickel (9Ni 등) – 15.83 FU/ton'},
+        {val:'14.56b',label:'Boiler & Pressure Vessel Steel (P235/P355 등) – 14.56 FU/ton'},
+        {val:'62.95',label:'Aluminium Alloys – 62.95 FU/ton'},
+        {val:'22.16',label:'Steel Round Bars for Chain Cable – 22.16 FU/ton'},
+        {val:'57.01',label:'Special Steel Grades – 57.01 FU/ton'},
+        {val:'62.95b',label:'Cladded/Triclad Material – 62.95 FU/ton'},
+      ]},
+      {id:'qty',type:'number',label:'총 무게 (Ton)',placeholder:'예: 50'},
+      {id:'addInsp',type:'select',label:'추가 검사 (Additional Inspection)',options:[{val:'no',label:'없음'},{val:'yes',label:'있음 (+20%)'}]},
+    ],
+    calcFn:function(v){ const m={'10.10':10.10,'13.01':13.01,'14.56':14.56,'34.47':34.47,'15.83':15.83,'14.56b':14.56,'62.95':62.95,'22.16':22.16,'57.01':57.01,'62.95b':62.95}; return (m[v.matType]||10.10)*v.qty; },
+    calcModFn:function(v,fu){ return v.addInsp==='yes'?fu*1.20:fu; }
+  },
+  { id:'4.2', name:'Castings', multi:true,
+    products:['Steel casting','Copper Alloy casting','Aluminium casting','Stainless Steel Casting','Cast Steel'],
+    unit:'Weight (kg)',
+    multiFields:[
+      {id:'site',type:'select',label:'검사 장소',w:'1.6fr',options:[{v:'mfr',l:'제조사 현장 (4.2.1)'},{v:'machine',l:'기계가공 현장 (4.2.2)'}]},
+      {id:'cond',type:'select',label:'납품 조건',w:'1.4fr',options:[{v:'finished',l:'Finished'},{v:'rough',l:'As Rough'},{v:'ascast',l:'As Cast'}]},
+      {id:'mat',type:'select',label:'재질',w:'1.1fr',options:[{v:'none',l:'Carbon'},{v:'ss',l:'SUS+20%'},{v:'cu',l:'Cu+20%'},{v:'alloy',l:'Alloy+30%'},{v:'al',l:'Al+40%'}]},
+      {id:'wt',type:'number',label:'무게(kg)',w:'0.9fr',placeholder:'예: 5000'},
+    ],
+    multiCalcFn:function(v){
+      const w=parseFloat(v.wt)||0;
+      let fu=w<=20000?12*w/100:1200+6*(w/100);
+      let m=1;
+      if(v.site==='mfr'){ if(v.cond==='rough')m*=0.90; if(v.cond==='ascast')m*=0.80; }
+      else { if(v.cond==='ascast')m*=0.30; if(v.cond==='rough')m*=0.20; }
+      m*=matMult(v.mat);
+      return fu*m;
+    },
+    multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',ascast:'As Cast'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'제조사':'기계가공'})`; }
+  },
+  { id:'4.3', name:'Forgings', multi:true,
+    products:['Steel forging','Copper Alloy forging','Crankshaft','Propeller Shaft','Piston Rod','Cylinder Head','Forging'],
+    unit:'Weight (kg)',
+    multiFields:[
+      {id:'site',type:'select',label:'검사 장소',w:'1.6fr',options:[{v:'mfr',l:'제조사 현장 (4.3.1)'},{v:'machine',l:'기계가공 현장 (4.3.2)'}]},
+      {id:'cond',type:'select',label:'납품 조건',w:'1.4fr',options:[{v:'finished',l:'Finished'},{v:'rough',l:'As Rough'},{v:'asforged',l:'As Forged'}]},
+      {id:'mat',type:'select',label:'재질',w:'1.1fr',options:[{v:'none',l:'Carbon'},{v:'ss',l:'SUS+20%'},{v:'cu',l:'Cu+20%'},{v:'alloy',l:'Alloy+30%'},{v:'al',l:'Al+40%'}]},
+      {id:'wt',type:'number',label:'무게(kg)',w:'0.9fr',placeholder:'예: 10000'},
+    ],
+    multiCalcFn:function(v){
+      const w=parseFloat(v.wt)||0;
+      let fu=w<=20000?16*w/100:1600+8*(w/100);
+      let m=1;
+      if(v.site==='mfr'){ if(v.cond==='rough')m*=0.90; if(v.cond==='asforged')m*=0.80; }
+      else { if(v.cond==='asforged')m*=0.30; if(v.cond==='rough')m*=0.20; }
+      m*=matMult(v.mat);
+      return fu*m;
+    },
+    multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',asforged:'As Forged'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'제조사':'기계가공'})`; }
+  },
+  { id:'4.5', name:'Testing / Retesting / Validation of Materials',
+    products:['Material Testing','Heat Number','Charge Number','Retesting','Transfer of Marks','Lab Attendance'],
+    unit:'Heat Number', noMinFee:true,
+    inputs:[
+      {id:'qty',type:'number',label:'Heat Number 수량',placeholder:'예: 3'},
+      {id:'mat',type:'select',label:'재질 특약',options:[{val:'none',label:'Carbon Steel'},{val:'ss',label:'Stainless Steel (+20%)'},{val:'cu',label:'Copper Alloy (+20%)'},{val:'alloy',label:'Alloy Steel (+30%)'},{val:'al',label:'Aluminium (+40%)'},{val:'fg',label:'Forgings (+20%)'},{val:'cs',label:'Castings (+20%)'}]},
+    ],
+    calcFn:function(v){ const n=Math.max(1,parseInt(v.qty)||1); return n===1?550:550+(n-1)*150; },
+    calcModFn:function(v,fu){ let m=1; if(v.mat==='ss'||v.mat==='cu'||v.mat==='fg'||v.mat==='cs')m*=1.20; if(v.mat==='alloy')m*=1.30; if(v.mat==='al')m*=1.40; return fu*m; }
+  },
+  { id:'4.6', name:'Pipe & Tube (Seamless/Welded/Stainless Steel)',
+    products:['Seamless Pipe','Welded Pipe','Stainless Steel Pipe','Tube','Pipe'],
+    unit:'Weight (kg)',
+    inputs:[
+      {id:'pipeType',type:'select',label:'파이프 유형',options:[{val:'sw',label:'Seamless/Welded'},{val:'ss',label:'Stainless Steel (+20%)'}]},
+      {id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 5000'},
+    ],
+    calcFn:function(v){ const w=v.qty,ss=v.pipeType==='ss'; return w<=20000?(ss?9.6:8)*w/100:(ss?1920:1600)+(ss?4.8:4)*(w/100); }
+  },
+  { id:'4.7', name:'Pipe & Tube (Aluminium Alloy)',
+    products:['Aluminium Pipe','Aluminium Tube','Al Pipe'],
+    unit:'Weight (kg)',
+    inputs:[{id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 2000'}],
+    calcFn:function(v){ return v.qty<=20000?11.2*v.qty/100:2240+5.6*(v.qty/100); }
+  },
+  { id:'4.8', name:'Pipe & Tube (Copper Alloy)',
+    products:['Copper Pipe','Copper Alloy Tube','CuNi Pipe','Cu Pipe'],
+    unit:'Weight (kg)',
+    inputs:[{id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 1000'}],
+    calcFn:function(v){ return v.qty<=5000?50*v.qty/100:2500+30*(v.qty/100); }
+  },
+  // ── Chapter 5 Electrical ─────────────────────────────────────
+  { id:'5.1', name:'Motors',
+    products:['AC Motor','DC Motor','Propulsion Motor','Electric Motor','Motor'],
+    unit:'Power (kW)', noMinFee:true,
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
+      {id:'hv',type:'select',label:'전압',options:[{val:'lv',label:'Low Voltage'},{val:'hv',label:'High Voltage DC≥1500V/AC≥1000V (+20%)'}]},
+      {id:'prop',type:'select',label:'추진용',options:[{val:'no',label:'일반'},{val:'yes',label:'Propulsion Motor (+25%)'}]},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1대'},{val:'2',label:'2대 (-10%)'},{val:'3',label:'3대 이상 (-15%)'}]},
+    ],
+    note:'※ 여러 대인 경우 각각 개별 kW로 FU를 산출한 후 합산합니다.',
+    calcFn:function(v){ return motorFU(v.qty); },
+    calcModFn:function(v,fu){ let m=1; if(v.hv==='hv')m*=1.20; if(v.prop==='yes')m*=1.25; if(v.qty2==='2')m*=0.90; if(v.qty2==='3')m*=0.85; return fu*m; }
+  },
+  { id:'5.2', name:'Generators',
+    products:['AC Generator','DC Generator','Propulsion Generator','Alternator','Generator'],
+    unit:'Power (kW)', noMinFee:true,
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 1000'},
+      {id:'hv',type:'select',label:'전압',options:[{val:'lv',label:'Low Voltage'},{val:'hv',label:'High Voltage (+20%)'}]},
+      {id:'prop',type:'select',label:'추진용',options:[{val:'no',label:'일반'},{val:'yes',label:'Propulsion (+25%)'}]},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1대'},{val:'2',label:'2대 (-10%)'},{val:'3',label:'3대 이상 (-15%)'}]},
+    ],
+    note:'※ 여러 대인 경우 각각 개별 kW로 FU를 산출한 후 합산합니다.',
+    calcFn:function(v){ return motorFU(v.qty); },
+    calcModFn:function(v,fu){ let m=1; if(v.hv==='hv')m*=1.20; if(v.prop==='yes')m*=1.25; if(v.qty2==='2')m*=0.90; if(v.qty2==='3')m*=0.85; return fu*m; }
+  },
+  { id:'5.3', name:'Electrical Cables',
+    products:['Electric Cable','Cable','MV Cable','LV Cable','Power Cable'],
+    unit:'Cable Size (mm²) per km',
+    inputs:[
+      {id:'coreType',type:'select',label:'코어 유형',options:[{val:'single',label:'Single Core'},{val:'double',label:'Double Core'},{val:'multi',label:'Multi Core'}]},
+      {id:'qty',type:'number',label:'Cable Size (mm²)',placeholder:'예: 50'},
+      {id:'len',type:'number',label:'길이 (km)',placeholder:'예: 2'},
+    ],
+    calcFn:function(v){ const sz=v.qty,len=v.len||1; let b=sz<=6?50:sz<=16?100:sz<=50?150:sz<=100?250:sz<=250?400:500; const mul={single:1,double:1.2,multi:1.4}[v.coreType]||1; return b*mul*len; }
+  },
+  { id:'5.4', name:'Transformers, Converters & UPS',
+    products:['Transformer','Frequency Converter','UPS','Uninterruptible Power Supply'],
+    unit:'Power (kVA)',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kVA)',placeholder:'예: 1000'},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1-2대'},{val:'34',label:'3-4대 (-10%)'},{val:'5',label:'5대 이상 (-20%)'}]},
+    ],
+    note:'※ 여러 대인 경우 각각 개별 kVA로 FU를 산출한 후 합산합니다.',
+    calcFn:function(v){ const p=v.qty; const t=[{m:100,f:500},{m:150,f:700},{m:200,f:860},{m:300,f:1020},{m:400,f:1110},{m:500,f:1200},{m:1000,f:1500},{m:1500,f:1875},{m:2000,f:2250},{m:2500,f:2438},{m:3000,f:2625},{m:3500,f:2813},{m:4000,f:3000},{m:4500,f:3188},{m:5000,f:3375},{m:6000,f:3750},{m:7000,f:4125},{m:8000,f:4500},{m:9000,f:4875}]; for(const r of t) if(p<=r.m) return r.f; return 4875+75*Math.ceil((p-9000)/200); },
+    calcModFn:function(v,fu){ if(v.qty2==='34')return fu*0.90; if(v.qty2==='5')return fu*0.80; return fu; }
+  },
+  { id:'5.5', name:'Bus Bar Trunking System',
+    products:['Busbar','Bus Bar Trunking','Busduct'],
+    unit:'Cable Length (m)',
+    inputs:[{id:'qty',type:'number',label:'총 길이 (m)',placeholder:'예: 100'}],
+    calcFn:function(v){ return 20*v.qty; }
+  },
+  { id:'5.6', name:'Main Switchboard & Emergency Switchboard',
+    products:['Main Switchboard','MSB','MSBD','Emergency Switchboard','ESB','ESBD','Switchboard'],
+    unit:'Power (kW)',
+    special:'5.6_gsp',
+    inputs:[
+      {id:'msbd_kw',type:'number',label:'MSBD kW',placeholder:'예: 3000'},
+      {id:'esbd_kw',type:'number',label:'ESBD kW',placeholder:'예: 500'},
+      {id:'gsp_kw',type:'number',label:'GSP (Group Starter Panel) kW 합계',placeholder:'예: 1200'},
+      {id:'hv',type:'select',label:'전압',options:[{val:'lv',label:'Low Voltage'},{val:'hv',label:'High Voltage (+20%)'}]},
+    ],
+    note:'※ MSBD + ESBD + GSP kW를 합산한 총 kW로 Fee Unit을 결정합니다.',
+    calcFn:function(v){ const total=(parseFloat(v.msbd_kw)||0)+(parseFloat(v.esbd_kw)||0)+(parseFloat(v.gsp_kw)||0); return swbFU(total); },
+    calcModFn:function(v,fu){ return v.hv==='hv'?fu*1.20:fu; }
+  },
+  { id:'5.7', name:'Standard Control, Alarm & Safety System / Panels',
+    products:['AMS','Alarm Monitoring System','RCS','Remote Control System','PMS','Power Management System','ECC','EGCS','BWTS','Gas Detecting','SCR','HE Foam','LFFS','Local Starter Panel'],
+    unit:'System',
+    inputs:[
+      {id:'sysType',type:'select',label:'시스템 유형',options:[
+        {val:'ams',label:'Alarm Monitoring System (AMS) – 1,000 FU'},
+        {val:'rcs',label:'Remote Control System (RCS) – 1,000 FU'},
+        {val:'egcs',label:'EGCS / BWTS / SCR / Gas Detecting – 1,000 FU'},
+        {val:'console',label:'Console (ECC/BCC/CCC) & Local Control Panel – 600 FU'},
+        {val:'pms',label:'PMS / HE Foam System / LFFS / Local Starter Panel / ETC – 600 FU'},
+      ]},
+      {id:'twin',type:'select',label:'Twin Propulsion (AMS/RCS만 해당)',options:[{val:'no',label:'해당 없음'},{val:'yes',label:'해당 (+50%)'}]},
+      {id:'gas',type:'select',label:'Gas Carrier / Cruise / Dual Fuel (AMS/RCS만 해당)',options:[{val:'no',label:'해당 없음'},{val:'yes',label:'해당 (+50%)'}]},
+      {id:'simul',type:'select',label:'동시 검사 수량',options:[{val:'no',label:'1–3 systems'},{val:'yes',label:'4개 이상 동시 (-20%)'}]},
+    ],
+    calcFn:function(v){ return {ams:1000,rcs:1000,egcs:1000,console:600,pms:600}[v.sysType]||600; },
+    calcModFn:function(v,fu){ let m=1; const ar=v.sysType==='ams'||v.sysType==='rcs'; if(ar&&v.twin==='yes')m*=1.50; if(ar&&v.gas==='yes')m*=1.50; if(v.simul==='yes')m*=0.80; return fu*m; }
+  },
+  { id:'5.8', name:'Local, Individual, Group Starter Panels',
+    products:['Local Starter Panel','Starter Panel','Group Starter','Individual Panel'],
+    unit:'Power (kW)',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
+      {id:'battery',type:'select',label:'Battery Panel',options:[{val:'no',label:'일반'},{val:'yes',label:'Battery Panel (+10%)'}]},
+    ],
+    calcFn:function(v){ return starterFU(v.qty); },
+    calcModFn:function(v,fu){ return v.battery==='yes'?fu*1.10:fu; }
+  },
+  { id:'5.9', name:'Alternative Marine Power (AMP) for Shore Connection Panels',
+    products:['AMP Panel','Alternative Marine Power','Shore Connection Panel','Shore Power','Cold Ironing','OPS','Onshore Power Supply'],
+    unit:'Power (kVA)',
+    inputs:[{id:'qty',type:'number',label:'정격 출력 (kVA)',placeholder:'예: 3125'}],
+    calcFn:function(v){ const p=v.qty; if(p<=3125)return 1050; if(p<=6250)return 2800; if(p<=9375)return 4700; if(p<=12500)return 5450; return 6200; }
+  },
+  { id:'5.10', name:'HV Bow Thruster Panels & Electric Motor Starter Panels',
+    products:['HV Bow Thruster Panel','Electric Motor Starter Panel','DC System Panel','VFD Panel','Variable Speed Drive'],
+    unit:'Power (kW)',
+    inputs:[{id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 2000'}],
+    calcFn:function(v){ return starterFU(v.qty); }
+  },
+  // ── Chapter 6 Engines ────────────────────────────────────────
+  { id:'6.1', name:'Main Oil Engines',
+    products:['Main Engine','Two-stroke Engine','MAN Engine','WinGD','HFO Engine','Main Diesel'],
+    unit:'Power (kW)',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 10000'},
+      {id:'dualfuel',type:'select',label:'Dual Fuel',options:[{val:'no',label:'일반'},{val:'yes',label:'Dual Fuel (+20%)'}]},
+      {id:'recon',type:'select',label:'Reconditioned',options:[{val:'no',label:'신품'},{val:'yes',label:'Reconditioned (-20%)'}]},
+    ],
+    calcFn:function(v){ return mainEngFU(v.qty); },
+    calcModFn:function(v,fu){ let m=1; if(v.dualfuel==='yes')m*=1.20; if(v.recon==='yes')m*=0.80; return fu*m; }
+  },
+  { id:'6.2', name:'Auxiliary Oil Engines',
+    products:['Auxiliary Engine','Generator Engine','Aux Engine','Diesel Generator','D/G'],
+    unit:'Power (kW)', noMinFee:true,
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
+      {id:'dualfuel',type:'select',label:'Dual Fuel',options:[{val:'no',label:'일반'},{val:'yes',label:'Dual Fuel (+20%)'}]},
+      {id:'recon',type:'select',label:'Reconditioned',options:[{val:'no',label:'신품'},{val:'yes',label:'Reconditioned (-20%)'}]},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1대'},{val:'2',label:'2대 (-10%)'},{val:'3',label:'3대 이상 (-15%)'}]},
+    ],
+    calcFn:function(v){ return auxEngFU(v.qty); },
+    calcModFn:function(v,fu){ let m=1; if(v.dualfuel==='yes')m*=1.20; if(v.recon==='yes')m*=0.80; if(v.qty2==='2')m*=0.90; if(v.qty2==='3')m*=0.85; return fu*m; }
+  },
+  { id:'6.3', name:'Auxiliary Engines for Emergency Use',
+    products:['Emergency Engine','Emergency Generator Engine','E/G Engine','Emergency Diesel'],
+    unit:'Power (kW)',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 200'},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1대'},{val:'2',label:'2대 (-10%)'},{val:'3',label:'3대 이상 (-15%)'}]},
+    ],
+    calcFn:function(v){ return emergEngFU(v.qty); },
+    calcModFn:function(v,fu){ let m=1; if(v.qty2==='2')m*=0.90; if(v.qty2==='3')m*=0.85; return fu*m; }
+  },
+  { id:'6.4', name:'NOx Test for Non LR Classed Ships',
+    products:['NOx Test','NOx','Emission Test','MARPOL Annex VI'],
+    unit:'Engine Type',
+    inputs:[
+      {id:'engType',type:'select',label:'엔진 유형',options:[
+        {val:'ms_p3',label:'Medium Speed Parent – Tier III: 2,500 FU'},
+        {val:'ms_p2',label:'Medium Speed Parent – Tier II: 1,500 FU'},
+        {val:'ls_p3',label:'Low Speed Parent – Tier III: 3,500 FU'},
+        {val:'ls_p2',label:'Low Speed Parent – Tier II: 2,600 FU'},
+        {val:'ms_m1',label:'Medium Speed Member 1대 – 730 FU'},
+        {val:'ms_m2',label:'Medium Speed Member 2대 – 1,000 FU'},
+        {val:'ms_m3',label:'Medium Speed Member 3대 – 1,300 FU'},
+        {val:'ms_m4',label:'Medium Speed Member 4대+ – 400 FU/대'},
+        {val:'ls_m1',label:'Low Speed Member 1대 – 730 FU'},
+        {val:'ls_m2',label:'Low Speed Member 2대+ – 500 FU/대'},
+      ]},
+      {id:'qty',type:'number',label:'유닛 수 (Member Engine인 경우)',placeholder:'예: 1'},
+    ],
+    calcFn:function(v){ const q=parseInt(v.qty)||1; const m={ms_p3:2500,ms_p2:1500,ls_p3:3500,ls_p2:2600,ms_m1:730,ms_m2:1000,ms_m3:1300,ls_m1:730}; if(v.engType==='ms_m4')return 400*q; if(v.engType==='ls_m2')return 500*q; return m[v.engType]||730; }
+  },
+  // ── Chapter 7 Engine & Propulsion ───────────────────────────
+  { id:'7.1', name:'Gearing for Propulsion',
+    products:['Gearbox','Reduction Gear','Propulsion Gear','Reverse Gear','Gear'],
+    unit:'Power (kW)',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 5000'},
+      {id:'gearType',type:'select',label:'기어 유형',options:[{val:'single',label:'Single Reduction (-70%)'},{val:'double',label:'Double Reduction (-60%)'},{val:'multiple',label:'Multiple Gearing (-50%)'},{val:'complicated',label:'Complicated Gearing (-40%)'},{val:'reverse',label:'Reverse Gear (+10%)'}]},
+      {id:'coupling',type:'select',label:'Coupling 포함',options:[{val:'no',label:'없음'},{val:'yes',label:'포함 (+10%)'}]},
+      {id:'recon',type:'select',label:'Reconditioned',options:[{val:'no',label:'신품'},{val:'yes',label:'Reconditioned (-20%)'}]},
+    ],
+    calcFn:function(v){ return mainEngFU(v.qty); },
+    calcModFn:function(v,fu){ let m={single:0.30,double:0.40,multiple:0.50,complicated:0.60,reverse:1.10}[v.gearType]||1; if(v.coupling==='yes')m*=1.10; if(v.recon==='yes')m*=0.80; return fu*m; }
+  },
+  { id:'7.2', name:'Propellers',
+    products:['Propeller','FPP','CPP','Fixed Pitch Propeller','Controllable Pitch Propeller'],
+    unit:'Weight (Ton)',
+    inputs:[
+      {id:'qty',type:'number',label:'무게 (ton)',placeholder:'예: 5'},
+      {id:'buildup',type:'select',label:'Built-up Propeller',options:[{val:'no',label:'일반'},{val:'yes',label:'Built-up (+50%)'}]},
+    ],
+    calcFn:function(v){ return v.qty<=10?100*(v.qty*1000/500):2200+100*(v.qty-10); },
+    calcModFn:function(v,fu){ return v.buildup==='yes'?fu*1.50:fu; }
+  },
+  { id:'7.7', name:'Turbochargers',
+    products:['Turbocharger','Turbo Charger','TC','ABB Turbocharger','MHI Turbocharger'],
+    unit:'Compressor Wheel Diameter (mm)',
+    inputs:[{id:'qty',type:'number',label:'Compressor Wheel 외경 (mm)',placeholder:'예: 400'}],
+    calcFn:function(v){ const d=v.qty; if(d<=150)return 250; if(d<=300)return 460; if(d<=450)return 670; if(d<=600)return 880; if(d<=750)return 1090; if(d<=900)return 1300; return 1510; }
+  },
+  { id:'7.8', name:'Auxiliary Engine Generator Sets',
+    products:['Generator Set','Genset','Engine-Generator Set','D/G Set','Diesel Generator Set'],
+    unit:'Power (kW)',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 1000'},
+      {id:'hv',type:'select',label:'전압',options:[{val:'lv',label:'Low Voltage'},{val:'hv',label:'High Voltage (+20%)'}]},
+    ],
+    calcFn:function(v){ const p=v.qty; const t=[{m:100,f:600},{m:125,f:720},{m:150,f:765},{m:175,f:810},{m:200,f:855},{m:250,f:900},{m:325,f:945},{m:400,f:990},{m:475,f:1035},{m:550,f:1080},{m:625,f:1125},{m:700,f:1170},{m:775,f:1215},{m:850,f:1260},{m:925,f:1305},{m:1000,f:1350},{m:1100,f:1418},{m:1200,f:1485},{m:1300,f:1553},{m:1400,f:1620},{m:1500,f:1688},{m:1600,f:1755},{m:1700,f:1823},{m:1800,f:1890},{m:1900,f:1958},{m:2000,f:2025},{m:2400,f:2160},{m:2800,f:2295},{m:3200,f:2430},{m:3600,f:2565},{m:4000,f:2700},{m:4400,f:2835},{m:4800,f:2970},{m:5200,f:3105},{m:5600,f:3240},{m:6000,f:3375},{m:6400,f:3510},{m:6800,f:3645},{m:7200,f:3780},{m:8000,f:4050},{m:9000,f:4388},{m:10000,f:4725},{m:10200,f:4793}]; for(const r of t) if(p<=r.m) return r.f; return 4793+68*Math.ceil((p-10200)/200); },
+    calcModFn:function(v,fu){ return v.hv==='hv'?fu*1.20:fu; }
+  },
+  // ── Chapter 8 Hull ───────────────────────────────────────────
+  { id:'8.1', name:'Anchors',
+    products:['Anchor','Cast Steel Anchor','Forged Anchor','Fabricated Anchor','Stockless Anchor'],
+    unit:'Weight (kg)',
+    inputs:[{id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 3000'}],
+    calcFn:function(v){ return v.qty<=20000?13.2*v.qty/100:1320+6.6*(v.qty/100); }
+  },
+  { id:'8.2', name:'Chain Cables & Fittings',
+    products:['Chain Cable','Anchor Chain','Mooring Chain','Chafing Chain','Chain Fitting'],
+    unit:'Diameter (mm)',
+    inputs:[
+      {id:'qty',type:'number',label:'체인 직경 (mm)',placeholder:'예: 60'},
+      {id:'len',type:'number',label:'27.5m 단위 수 (shackle 수)',placeholder:'예: 10'},
+      {id:'used',type:'select',label:'중고 케이블',options:[{val:'no',label:'신품'},{val:'yes',label:'중고 – 3 link breaking sample (+20%)'}]},
+    ],
+    calcFn:function(v){
+      const d=v.qty, n=parseInt(v.len)||1;
+      const t=[{m:10,f:30},{m:20,f:40},{m:30,f:50},{m:40,f:60},{m:50,f:70},{m:60,f:80},{m:70,f:90},{m:80,f:100},{m:90,f:105},{m:100,f:110},{m:110,f:115},{m:120,f:120},{m:200,f:125}];
+      let fu=125; for(const r of t) if(d<=r.m){fu=r.f;break;}
+      return fu*n;
+    },
+    calcModFn:function(v,fu){ return v.used==='yes'?fu*1.20:fu; }
+  },
+  { id:'8.3', name:'Bow & Stern Thrusters',
+    products:['Bow Thruster','Stern Thruster','DP Thruster','Tunnel Thruster'],
+    unit:'Power (kW)',
+    inputs:[{id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 1500'}],
+    calcFn:function(v){ const p=v.qty; if(p<=500)return 1100; if(p<=1000)return 1700; if(p<=1500)return 2100; if(p<=2000)return 2400; if(p<=2500)return 2700; if(p<=3000)return 3000; if(p<=3500)return 3300; if(p<=4000)return 3600; return 3600+300*Math.ceil((p-4000)/500); }
+  },
+  { id:'8.4', name:'Accommodation Ladder & Associated Winch and Standard Gangway',
+    products:['Accommodation Ladder','Gangway','Standard Gangway','Pilot Ladder Winch'],
+    unit:'Quantity', noMinFee:true,
+    inputs:[
+      {id:'ladderQty',type:'number',label:'Ladder 수량',placeholder:'예: 1'},
+      {id:'gangwayQty',type:'number',label:'Gangway 수량',placeholder:'예: 1'},
+      {id:'winchQty',type:'number',label:'Winch 수량',placeholder:'예: 1'},
+    ],
+    calcFn:function(v){ return (parseInt(v.ladderQty)||0)*550+(parseInt(v.gangwayQty)||0)*550+(parseInt(v.winchQty)||0)*275; }
+  },
+  { id:'8.5', name:'Welded Structure',
+    products:['Welded Structure','Hull Structure','Hatch Coaming','Fin Stabiliser','Rudder Trunk','Nozzle','Tween Deck'],
+    unit:'Weight (Ton)',
+    inputs:[{id:'qty',type:'number',label:'무게 (Ton)',placeholder:'예: 20'}],
+    calcFn:function(v){ return v.qty<=10?27.5*(v.qty*1000/500):550+55*(v.qty-10); }
+  },
+  { id:'8.6', name:'Rope Ladder, Pilot (Rope) Ladder and Embarkation Ladder',
+    products:['Rope Ladder','Pilot Ladder','Embarkation Ladder'],
+    unit:'Per Ladder',
+    inputs:[{id:'qty',type:'number',label:'Ladder 수량',placeholder:'예: 2'}],
+    calcFn:function(v){ const n=parseInt(v.qty)||1; if(n<=3)return 520*n; return 520*3+780*(n-3); }
+  },
+  { id:'8.7', name:'Side Scuttles, Windows with Frame and Windows Glass Panes',
+    products:['Side Scuttle','Windows with Frame','Window Frame','Windows Glass Pane','Glass Pane'],
+    unit:'Quantity',
+    inputs:[
+      {id:'winType',type:'select',label:'유형',options:[{val:'frame',label:'Side Scuttles & Windows with Frame'},{val:'cargo',label:'Windows Glass Panes – Cargo/Passenger (1.52 FU/ea)'},{val:'yacht',label:'Windows Glass Panes – Yacht/Bespoke (29.36 FU/ea)'}]},
+      {id:'qty',type:'number',label:'수량',placeholder:'예: 20'},
+    ],
+    calcFn:function(v){
+      const q=parseInt(v.qty)||0;
+      if(v.winType==='cargo') return 1.52*q;
+      if(v.winType==='yacht') return 29.36*q;
+      if(q<=10) return 520;
+      return 520+20*(q-10);
+    }
+  },
+  { id:'8.9', name:'Anchor Chain Stopper',
+    products:['Anchor Chain Stopper','Chain Stopper','Chain Cable Clench'],
+    unit:'Pieces',
+    inputs:[
+      {id:'diam',type:'select',label:'체인 직경',options:[{val:'100',label:'≤100mm – 330 FU/ea'},{val:'200',label:'≤200mm – 400 FU/ea'},{val:'200p',label:'>200mm – 500 FU/ea'},{val:'clench',label:'Chain Cable Clench – 30 FU/ea'}]},
+      {id:'qty',type:'number',label:'수량',placeholder:'예: 2'},
+    ],
+    calcFn:function(v){ const q=parseInt(v.qty)||1; const m={100:330,200:400,200p:500,clench:30}; return (m[v.diam]||330)*q; }
+  },
+  // ── Chapter 9 Lifting ────────────────────────────────────────
+  { id:'9.1', name:'Shipboard Crane – Gantry Cranes',
+    products:['Gantry Crane','Crane'],
+    unit:'Lifting Capacity (Ton)',
+    inputs:[{id:'qty',type:'number',label:'SWL (Ton)',placeholder:'예: 30'}],
+    calcFn:function(v){ return v.qty<=20?3820:2120+85*v.qty; }
+  },
+  { id:'9.2', name:'Shipboard Crane – Jib & Luffing Cranes',
+    products:['Jib Crane','Luffing Crane','Rescue Crane','Boat Crane','Crane Certification'],
+    unit:'Lifting Capacity (Ton)',
+    inputs:[
+      {id:'qty',type:'number',label:'SWL (Ton)',placeholder:'예: 25'},
+      {id:'personnel',type:'select',label:'Personnel Handling 포함',options:[{val:'no',label:'없음'},{val:'yes',label:'포함 (+20%)'}]},
+    ],
+    calcFn:function(v){ const t=[{m:2,f:600},{m:5,f:900},{m:10,f:1224},{m:15,f:1848},{m:20,f:2228},{m:25,f:2566},{m:30,f:2866},{m:35,f:3066},{m:40,f:3266},{m:50,f:3666}]; for(const r of t) if(v.qty<=r.m) return r.f; return 3666; },
+    calcModFn:function(v,fu){ return v.personnel==='yes'?fu*1.20:fu; }
+  },
+  { id:'9.3', name:'Spreader & Lifting Beams, Masts, Derrick Posts & Derricks (Welded)',
+    products:['Spreader','Lifting Beam','Derrick','Mast','Derrick Post','Welded Derrick'],
+    unit:'Weight (Ton)',
+    inputs:[{id:'qty',type:'number',label:'무게 (Ton)',placeholder:'예: 5'}],
+    calcFn:function(v){ const w=v.qty; if(w<=2)return 150*w; if(w<=10)return 300+65*(w-2); if(w<=20)return 820+30*(w-10); return 1120+20*(w-20); }
+  },
+  { id:'9.5', name:'Engine Room Overhead Cranes',
+    products:['Engine Room Crane','Overhead Crane','EOT Crane'],
+    unit:'Lifting Capacity (Ton)',
+    inputs:[{id:'qty',type:'number',label:'SWL (Ton)',placeholder:'예: 10'}],
+    calcFn:function(v){ const t=v.qty; if(t<=5)return 600; if(t<=10)return 1210; return 1210+70*(t-10); }
+  },
+  { id:'9.6', name:'Proof Load Test for Loose Gear',
+    products:['Shackle','Hook','Block','Sheave','Tackles','Towing Equipment','Loose Gear'],
+    unit:'Quantity',
+    inputs:[
+      {id:'gearType',type:'select',label:'장비 유형',options:[{val:'shackle',label:'Shackle WLL<100T – 24 FU/ea'},{val:'block',label:'Block/Sheave WLL<10T – 57 FU'},{val:'block10',label:'Block 10T≤WLL<20T – 116 FU'},{val:'block20',label:'Block 20T≤WLL<50T – 136 FU'},{val:'triangle',label:'Triangle Plate – 58 FU'},{val:'bracket',label:'Towing Bracket/Plate – 228 FU'},{val:'bridle',label:'Towing Bridle complete – 698 FU'}]},
+      {id:'qty',type:'number',label:'수량',placeholder:'예: 10'},
+      {id:'used',type:'select',label:'중고 Shackle',options:[{val:'no',label:'신품'},{val:'yes',label:'중고 (×1.5, Shackle만 해당)'}]},
+    ],
+    calcFn:function(v){ const q=parseInt(v.qty)||1; const m={shackle:24,block:57,block10:116,block20:136,triangle:58,bracket:228,bridle:698}; return (m[v.gearType]||24)*q; },
+    calcModFn:function(v,fu){ return (v.used==='yes'&&v.gearType==='shackle')?fu*1.5:fu; }
+  },
+  { id:'9.7', name:'Shackles & Swivels',
+    products:['Shackle','Swivel','Anchor Shackle'],
+    unit:'Weight (kg)',
+    inputs:[{id:'qty',type:'number',label:'무게 (kg)',placeholder:'예: 20'}],
+    calcFn:function(v){ const w=v.qty; if(w<=15)return 8; if(w<=30)return 18; if(w<=50)return 32; return 41; }
+  },
+  { id:'9.8', name:'Steel Wire & Fibre Ropes',
+    products:['Steel Wire Rope','Fibre Rope','Wire Rope','Mooring Line','Towing Wire'],
+    unit:'Project ID Quantity',
+    inputs:[
+      {id:'ropeType',type:'select',label:'유형',options:[
+        {val:'single',label:'Fibre/Wire rope Single Lay Sling (88+0.012×MBL FU)'},
+        {val:'imca',label:'Cable Lay Sling/Grommet (IMCA) – 293 FU'},
+        {val:'en',label:'Cable Lay Sling (EN13414-3) – 135+0.019×SWL FU'},
+        {val:'assembly',label:'Complete 2,3,4-Leg Wire Rope Assembly – 225 FU'},
+        {val:'destruct',label:'Destruction Test – 294 FU'},
+        {val:'recert',label:'Re-certification/Visual only – 53 FU'},
+        {val:'length',label:'Length Measuring – 134 FU'},
+      ]},
+      {id:'mbl',type:'number',label:'MBL (kN) 또는 SWL (Ton) — 해당 유형만',placeholder:'예: 500'},
+      {id:'qty',type:'number',label:'수량',placeholder:'예: 1'},
+    ],
+    calcFn:function(v){
+      const q=parseInt(v.qty)||1;
+      let fu=0;
+      if(v.ropeType==='single') fu=88+0.012*(parseFloat(v.mbl)||0);
+      else if(v.ropeType==='imca') fu=293;
+      else if(v.ropeType==='en') fu=135+0.019*(parseFloat(v.mbl)||0);
+      else if(v.ropeType==='assembly') fu=225;
+      else if(v.ropeType==='destruct') fu=294;
+      else if(v.ropeType==='recert') fu=53;
+      else if(v.ropeType==='length') fu=134;
+      return fu*q;
+    }
+  },
+  { id:'9.9', name:'Winches for Cargo Gear and Other Winches',
+    products:['Winch','Cargo Winch','Mooring Winch','Boat Winch','Topping Lift Winch'],
+    unit:'Per Winch',
+    inputs:[
+      {id:'winchType',type:'select',label:'Winch 유형',options:[{val:'th',label:'Topping Lift (Hand) – 275 FU'},{val:'te',label:'Topping Lift (Electric) – 420 FU'},{val:'boat',label:'Boat – 495 FU'},{val:'mooring',label:'Electric Mooring – 595 FU'},{val:'cargo',label:'Normal Cargo – 615 FU'},{val:'heavy',label:'Heavy Lift Cargo – 1,185 FU'}]},
+      {id:'qty',type:'number',label:'수량',placeholder:'예: 2'},
+    ],
+    calcFn:function(v){ const q=parseInt(v.qty)||1; const m={th:275,te:420,boat:495,mooring:595,cargo:615,heavy:1185}; return (m[v.winchType]||615)*q; }
+  },
+  // ── Chapter 10 Machinery ─────────────────────────────────────
+  { id:'10.1', name:'Pumps',
+    products:['Pump','Centrifugal Pump','Gear Pump','Hydraulic Pump','Screw Pump','Displacement Pump','Dynamic Pump'],
+    unit:'Flow Rate (m³/hr)',
+    inputs:[
+      {id:'pumpType',type:'select',label:'펌프 유형',options:[{val:'disp',label:'Displacement Pump'},{val:'dynamic',label:'Dynamic Pump (×1.2)'},{val:'hydraulic',label:'Hydraulic Pump (×1.5)'}]},
+      {id:'qty',type:'number',label:'Flow Rate (m³/hr)',placeholder:'예: 100'},
+      {id:'cryo',type:'select',label:'극저온',options:[{val:'no',label:'일반'},{val:'yes',label:'Cryogenic (×2)'}]},
+    ],
+    calcFn:function(v){ const c=v.qty||1; const b=25+70*Math.pow(c,1/3); return{disp:b,dynamic:b*1.2,hydraulic:b*1.5}[v.pumpType]||b; },
+    calcModFn:function(v,fu){ return v.cryo==='yes'?fu*2:fu; }
+  },
+  { id:'10.3', name:'Reciprocating Air Compressors',
+    products:['Reciprocating Compressor','Air Compressor','Starting Air Compressor','Piston Compressor'],
+    unit:'Capacity (m³/hr)',
+    inputs:[
+      {id:'qty',type:'number',label:'용량 (m³/hr)',placeholder:'예: 80'},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1대'},{val:'23',label:'2-3대 (-20%)'},{val:'4',label:'4대 이상 (-30%)'}]},
+    ],
+    calcFn:function(v){ const c=v.qty; if(c<=5)return 240; if(c<=20)return 270; if(c<=50)return 410; if(c<=100)return 490; if(c<=150)return 680; if(c<=200)return 810; if(c<=250)return 950; if(c<=300)return 1080; return 1080+3*(c-300); },
+    calcModFn:function(v,fu){ if(v.qty2==='23')return fu*0.80; if(v.qty2==='4')return fu*0.70; return fu; }
+  },
+  { id:'10.4', name:'Turbo / Screw / Rotary Air Compressors',
+    products:['Turbo Compressor','Screw Compressor','Rotary Compressor','Centrifugal Compressor'],
+    unit:'Capacity (m³/hr)',
+    inputs:[
+      {id:'qty',type:'number',label:'용량 (m³/hr)',placeholder:'예: 500'},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1대'},{val:'23',label:'2-3대 (-20%)'},{val:'4',label:'4대 이상 (-30%)'}]},
+    ],
+    calcFn:function(v){ const c=v.qty; const t=[{m:40,f:242},{m:60,f:297},{m:100,f:399},{m:150,f:454},{m:200,f:512},{m:250,f:569},{m:300,f:657},{m:400,f:753},{m:500,f:841},{m:600,f:923},{m:700,f:996},{m:800,f:1067},{m:900,f:1138},{m:1000,f:1192},{m:1200,f:1308},{m:1500,f:1462},{m:2000,f:1680},{m:2500,f:2065},{m:10000,f:2332}]; for(const r of t) if(c<=r.m) return r.f; return 2332; },
+    calcModFn:function(v,fu){ if(v.qty2==='23')return fu*0.80; if(v.qty2==='4')return fu*0.70; return fu; }
+  },
+  { id:'10.5', name:'Valves', multi:true,
+    products:['Valve','Butterfly Valve','Safety Valve','Control Valve','Cryogenic Valve','Gate Valve','Globe Valve','Check Valve','Relief Valve'],
+    unit:'Diameter (mm)',
+    multiFields:[
+      {id:'type',type:'select',label:'밸브 유형',w:'2fr',options:[{v:'ord',l:'Ordinary/Butterfly'},{v:'ss',l:'Stainless/Duplex (+20%)'},{v:'func',l:'Safety/Steam/Control (+50%)'}]},
+      {id:'bore',type:'number',label:'Bore(mm)',w:'0.8fr',placeholder:'예: 80'},
+      {id:'qty',type:'number',label:'수량',w:'0.5fr',placeholder:'1'},
+      {id:'cryo',type:'select',label:'Cryogenic',w:'0.9fr',options:[{v:'no',l:'일반'},{v:'yes',l:'×2'}]},
+    ],
+    multiCalcFn:function(v){ let fu=valveFU(parseFloat(v.bore)||0,v.type||'ord'); if(v.cryo==='yes')fu*=2; return fu*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ const t={ord:'Ordinary',ss:'Stainless/Duplex',func:'Safety/Control'}; return `${t[v.type]||v.type} DN${v.bore||0}${v.cryo==='yes'?' [Cryo]':''} ×${v.qty||1}`; }
+  },
+  { id:'10.7', name:'Gearing for Non-Propulsion Purposes',
+    products:['Non-Propulsion Gearbox','Windlass Gearbox','Winch Gearbox','Crane Gearbox'],
+    unit:'Power (kW)',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
+      {id:'gearType',type:'select',label:'기어 유형',options:[{val:'single',label:'Single Reduction (-70%)'},{val:'double',label:'Double Reduction (-60%)'},{val:'multiple',label:'Multiple Gearing (-50%)'},{val:'complicated',label:'Complicated Gearing (-40%)'}]},
+      {id:'coupling',type:'select',label:'Coupling 포함',options:[{val:'no',label:'없음'},{val:'yes',label:'포함 (+10%)'}]},
+    ],
+    calcFn:function(v){ return mainEngFU(v.qty); },
+    calcModFn:function(v,fu){ let m={single:0.30,double:0.40,multiple:0.50,complicated:0.60}[v.gearType]||0.50; if(v.coupling==='yes')m*=1.10; return fu*m; }
+  },
+  { id:'10.8', name:'Inert Gas and N2 Generators',
+    products:['Inert Gas Generator','N2 Generator','Nitrogen Generator','IG Generator','Inert Gas'],
+    unit:'Capacity (m³/hr)',
+    inputs:[{id:'qty',type:'number',label:'발생 용량 (m³/hr)',placeholder:'예: 2000'}],
+    calcFn:function(v){ const t=[{m:1000,f:1200},{m:2000,f:1370},{m:4000,f:1550},{m:6000,f:1730},{m:8000,f:1910},{m:11500,f:2230},{m:15000,f:2550}]; for(const r of t) if(v.qty<=r.m) return r.f; return 2550; }
+  },
+  { id:'10.9', name:'Miscellaneous Machinery Components',
+    products:['Bearing','Bolts','Studs','Shaft Sleeve','Piston Crown','Flexible Coupling','Gear Wheel','Chock','Tie-rod','Engine Damper'],
+    unit:'Quantity',
+    inputs:[
+      {id:'weight',type:'select',label:'개당 무게',options:[{val:'0.1',label:'≤0.1 kg → 1 Min Fee / 5,000개'},{val:'1',label:'0.11–1 kg → 1 Min Fee / 1,000개'},{val:'5',label:'1.1–5 kg → 1 Min Fee / 200개'},{val:'10',label:'5.1–10 kg → 1 Min Fee / 100개'},{val:'100',label:'10.1–100 kg → 1 Min Fee / 50개'},{val:'300',label:'101–300 kg → 1 Min Fee / 25개'}]},
+      {id:'qty',type:'number',label:'수량 (개)',placeholder:'예: 200'},
+    ],
+    calcFn:function(v){ const lim={'0.1':5000,'1':1000,'5':200,'10':100,'100':50,'300':25}; const qty=parseInt(v.qty)||1; return Math.ceil(qty/(lim[v.weight]||1000))*MIN_FEE/FF; }
+  },
+  { id:'10.10', name:'Fabricated Pipes, Hoses & Tubes, Expansion Bellows', multi:true,
+    products:['Fabricated Pipe','Hose','Tube','Expansion Bellows','Ejector','Flexible Joint'],
+    unit:'Quantity',
+    multiFields:[
+      {id:'qty',type:'number',label:'수량(개)',w:'1.5fr',placeholder:'예: 100'},
+      {id:'dw',type:'select',label:'Double-wall',w:'1.5fr',options:[{v:'no',l:'일반'},{v:'yes',l:'Double-walled +15%'}]},
+    ],
+    multiCalcFn:function(v){ const q=parseFloat(v.qty)||0; let fu=q<=100?470:q<=200?940:q<=300?1300:q<=400?1630:q<=500?1950:q<=1000?1950+150*Math.ceil((q-500)/100):2700+600*Math.ceil((q-1000)/1000); return v.dw==='yes'?fu*1.15:fu; },
+    multiLabelFn:function(v){ return `${v.qty||0}개${v.dw==='yes'?' [DW]':''}`; }
+  },
+  { id:'10.11', name:'Tank Welded Structure',
+    products:['Tank','Fresh Water Tank','Hydraulic Oil Tank','Bilge Tank','CO2 Storage Tank','Gas Fuel Tank'],
+    unit:'Weight (Ton)',
+    inputs:[{id:'qty',type:'number',label:'무게 (Ton)',placeholder:'예: 20'}],
+    calcFn:function(v){ return v.qty<=10?550:550+55*(v.qty-10); }
+  },
+  { id:'10.13', name:'Machinery Units / Skid',
+    products:['Machinery Skid','Hydraulic Power Unit','Pump Skid','Hi-Fog Unit','Machinery Unit'],
+    unit:'Footfall (m²)',
+    note:'※ Hydraulic power pack unit: 1.0m²로 계산. Sol valve cabinet: 2개당 1.0m²로 계산.',
+    inputs:[{id:'qty',type:'number',label:'설치 면적 Footfall (m²)',placeholder:'예: 5'}],
+    calcFn:function(v){ const f=Math.round(v.qty); const t=[{m:1,f:325},{m:2,f:599},{m:3,f:872},{m:4,f:1146},{m:5,f:1419},{m:6,f:1693},{m:7,f:1967},{m:8,f:2241},{m:9,f:2515},{m:10,f:2789},{m:15,f:4159},{m:20,f:5456},{m:25,f:6451},{m:30,f:7446},{m:35,f:8441},{m:40,f:9363},{m:45,f:9993},{m:50,f:10623}]; for(const r of t) if(f<=r.m) return r.f; return 10623; }
+  },
+  { id:'10.14', name:'Hydraulic Cylinders',
+    products:['Hydraulic Cylinder','Cylinder'],
+    unit:'Capacity (Litres)',
+    inputs:[{id:'qty',type:'number',label:'용적 (Litres)',placeholder:'예: 20'}],
+    calcFn:function(v){ const l=v.qty; if(l<=1)return 78; if(l<=10)return 78+(l-1); if(l<=100)return 87+10*Math.ceil((l-10)/10); return 177+10*Math.ceil((l-100)/10); }
+  },
+  // ── Chapter 11 Outfitting ────────────────────────────────────
+  { id:'11.2', name:'Rudder Assembly',
+    products:['Rudder','Fabricated Rudder','Rudder Horn','Twisted Rudder'],
+    unit:'Area (m²)',
+    inputs:[{id:'qty',type:'number',label:'면적 (m²)',placeholder:'예: 40'}],
+    calcFn:function(v){ return v.qty<=30?70*v.qty:2100+60*(v.qty-30); }
+  },
+  { id:'11.3', name:'Hatch Covers',
+    products:['Hatch Cover','Steel Hatch Cover','Non-Steel Door','Small Hatchway'],
+    unit:'Total Area (m²)',
+    inputs:[
+      {id:'qty',type:'number',label:'총 면적 (m²)',placeholder:'예: 200'},
+      {id:'htType',type:'select',label:'유형',options:[{val:'normal',label:'일반'},{val:'pontoon',label:'Pontoon Type – Container Ship (-30%)'},{val:'single',label:'Single Type Panel (-20%)'}]},
+    ],
+    calcFn:function(v){ const a=v.qty; if(a<=40)return 825; if(a<=200)return 825+100*Math.ceil((a-40)/10); if(a<=1000)return 2425+60*Math.ceil((a-200)/10); return 7225+30*Math.ceil((a-1000)/10); },
+    calcModFn:function(v,fu){ if(v.htType==='pontoon')return fu*0.70; if(v.htType==='single')return fu*0.80; return fu; }
+  },
+  { id:'11.5', name:'Shell Doors',
+    products:['Shell Door','Bow Door','Stern Door','Side Door'],
+    unit:'Quantity / Area',
+    inputs:[
+      {id:'doorType',type:'select',label:'도어 유형',options:[{val:'small',label:'Below 2.5m² – 300 FU/door'},{val:'5',label:'Above 2.5m² – Up to 5m²: 607 FU'},{val:'10',label:'Above 2.5m² – Up to 10m²: 1,368 FU'},{val:'30',label:'Above 2.5m² – Up to 30m²: 2,053 FU'},{val:'50',label:'Above 2.5m² – Up to 50m²: 2,851 FU'}]},
+      {id:'qty',type:'number',label:'수량 (Below 2.5m²인 경우)',placeholder:'예: 2'},
+    ],
+    calcFn:function(v){ if(v.doorType==='small')return 300*(parseInt(v.qty)||1); const m={5:607,10:1368,30:2053,50:2851}; return m[v.doorType]||607; },
+    noMinFee_small:true
+  },
+  { id:'11.6', name:'Watertight/Weathertight Small Hatches & Doors',
+    products:['Watertight Door','Weathertight Door','Watertight Hatch','WT Door','WT Hatch','Pilot Door'],
+    unit:'Quantity', noMinFee:true,
+    inputs:[
+      {id:'qty',type:'number',label:'수량 (도어/해치)',placeholder:'예: 10'},
+      {id:'passenger',type:'select',label:'Passenger/Mega Yacht',options:[{val:'no',label:'일반'},{val:'yes',label:'Passenger/Mega Yacht (×2)'}]},
+    ],
+    calcFn:function(v){ const q=parseInt(v.qty)||1; let fu=q<=15?525:525+35*(q-15); if(v.passenger==='yes')fu*=2; return fu; }
+  },
+  { id:'11.7', name:'Windlasses for Anchoring Equipment',
+    products:['Windlass','Anchor Windlass','Mooring Winch','Capstan'],
+    unit:'Cable Diameter (mm)',
+    inputs:[
+      {id:'qty',type:'number',label:'체인 직경 (mm)',placeholder:'예: 76'},
+      {id:'windType',type:'select',label:'유형',options:[{val:'windlass',label:'Windlass'},{val:'mooring',label:'Mooring Winch / Capstan (-25%)'}]},
+    ],
+    calcFn:function(v){ const d=v.qty; const t=[{m:10,f:450},{m:25,f:823},{m:30,f:861},{m:40,f:979},{m:50,f:1102},{m:70,f:1266},{m:90,f:1447},{m:100,f:1650},{m:125,f:1833},{m:150,f:2050},{m:175,f:2293},{m:200,f:2564},{m:225,f:2868},{m:250,f:3207},{m:275,f:3587},{m:300,f:4011}]; for(const r of t) if(d<=r.m) return r.f; return 4011; },
+    calcModFn:function(v,fu){ return v.windType==='mooring'?fu*0.75:fu; }
+  },
+  { id:'11.8', name:'All Types of Steering Gears',
+    products:['Steering Gear','Rudder Stock','Steering Unit','Electro-hydraulic Steering'],
+    unit:'Rudder Stock Diameter (mm)',
+    inputs:[{id:'qty',type:'number',label:'Rudder Stock 직경 (mm)',placeholder:'예: 400'}],
+    calcFn:function(v){ return v.qty<=350?6.5*v.qty:2275+(v.qty-350)*6; }
+  },
+  // ── Chapter 12 Pressure Vessels ─────────────────────────────
+  { id:'12.1', name:'Boilers',
+    products:['Boiler','Exhaust Gas Boiler','Oil Fired Boiler','Composite Boiler','Thermal Oil Heater'],
+    unit:'Heating Surface (m²)',
+    inputs:[{id:'qty',type:'number',label:'Overall Heating Surface (m²)',placeholder:'예: 150'}],
+    calcFn:function(v){ const hs=v.qty; if(hs<=100)return 2400; if(hs<=200)return 2400+60*Math.ceil((hs-100)/10); if(hs<=600)return 3000+150*Math.ceil((hs-200)/20); if(hs<=1200)return 6000+150*Math.ceil((hs-600)/30); if(hs<=2000)return 9000+150*Math.ceil((hs-1200)/40); return 12000+150*Math.ceil((hs-2000)/50); }
+  },
+  { id:'12.3', name:'Plate Type Heat Exchangers', multi:true,
+    products:['Plate Heat Exchanger','Plate Type Heat Exchanger','PHE','Plate Cooler','Heat Exchanger'],
+    unit:'Cooling Surface (m²)',
+    note:'FN: 각 제품의 개별 Fee를 합산하여 최종 청구합니다.',
+    multiFields:[
+      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.5fr',placeholder:'예: 50'},
+      {id:'qty',type:'number',label:'수량',w:'0.7fr',placeholder:'1'},
+    ],
+    multiCalcFn:function(v){ return plateTHXFU(parseFloat(v.area)||0)*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ return `PHE ${v.area||0}m² ×${v.qty||1}`; }
+  },
+  { id:'12.4', name:'Shell Type Heat Exchangers & Electrical Heaters', multi:true,
+    products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
+    unit:'Cooling Surface (m²)',
+    note:'FN: 각 제품의 개별 Fee를 합산하여 최종 청구합니다.',
+    multiFields:[
+      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.3fr',placeholder:'예: 100'},
+      {id:'htType',type:'select',label:'유형',w:'1.3fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
+      {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
+    ],
+    multiCalcFn:function(v){ let fu=shellTHXFU(parseFloat(v.area)||0); if(v.htType==='elec')fu*=1.2; return fu*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ const t={hx:'Shell HX',elec:'Elec Heater'}; return `${t[v.htType]||''} ${v.area||0}m² ×${v.qty||1}`; }
+  },
+  { id:'12.5', name:'Box Coolers',
+    products:['Box Cooler','Keel Cooler'],
+    unit:'Cooling Surface (m²)',
+    inputs:[{id:'qty',type:'number',label:'Cooling Surface (m²)',placeholder:'예: 50'}],
+    calcFn:function(v){ const a=v.qty; if(a<=1)return 74; if(a<=2)return 105; if(a<=10)return 134; if(a<=50)return 158; if(a<=80)return 271; if(a<=100)return 325; return 325+4*(a-100); }
+  },
+  { id:'12.6', name:'Unfired Pressure Vessels', multi:true,
+    products:['Air Receiver','Air Reservoir','Pressure Vessel','Steam Drum','Expansion Tank','Air Bottle','UPV','Unfired Pressure Vessel'],
+    unit:'Volume (Litres)',
+    note:'Shell made from Plate → 12.4(Shell HX) 요율 적용 / Shell made from Pipe → 12.3(Plate HX) 요율 적용 옵션 포함.',
+    multiFields:[
+      {id:'shellType',type:'select',label:'Shell 형태',w:'1.4fr',options:[{v:'standard',l:'Standard UPV'},{v:'plate',l:'Shell from Plate → 12.4 요율'},{v:'pipe',l:'Shell from Pipe → 12.3 요율'}]},
+      {id:'cls',type:'select',label:'Class',w:'1.1fr',options:[{v:'class1',l:'Class I'},{v:'class2',l:'Class II'},{v:'class3',l:'Class III'},{v:'alloy',l:'Alloy/Clad'}]},
+      {id:'vol',type:'number',label:'용적(L)',w:'0.9fr',placeholder:'예: 5000'},
+      {id:'fitting',type:'select',label:'배관 피팅',w:'0.9fr',options:[{v:'0',l:'없음'},{v:'1',l:'+1ea'},{v:'2',l:'+2ea'},{v:'3',l:'+3ea'},{v:'4',l:'+4ea'}]},
+      {id:'qty',type:'number',label:'수량',w:'0.5fr',placeholder:'1'},
+    ],
+    multiCalcFn:function(v){
+      const qty=parseInt(v.qty)||1, fittings=parseInt(v.fitting)||0;
+      let fu;
+      if(v.shellType==='plate') fu=shellTHXFU(parseFloat(v.vol)||0);
+      else if(v.shellType==='pipe') fu=plateTHXFU(parseFloat(v.vol)||0);
+      else fu=upvFU(parseFloat(v.vol)||0, v.cls||'class1');
+      return (fu+fittings*44.54)*qty;
+    },
+    multiLabelFn:function(v){ const cl={class1:'Cl.I',class2:'Cl.II',class3:'Cl.III',alloy:'Alloy'}; const st={standard:'',plate:'[Plate]',pipe:'[Pipe]'}; return `${st[v.shellType]||''} ${cl[v.cls]||''} ${v.vol||0}L ×${v.qty||1}${parseInt(v.fitting)>0?' +피팅':''}`; }
+  },
+  { id:'12.7', name:'Pipe Fittings & Flanges', multi:true,
+    products:['Pipe Fitting','Flange','Elbow','Tee','Reducer','Heated Coil','Header','Soot Blower'],
+    unit:'Quantity',
+    multiFields:[
+      {id:'qty',type:'number',label:'수량(개)',w:'1.5fr',placeholder:'예: 500'},
+      {id:'origin',type:'select',label:'생산지',w:'1.5fr',options:[{v:'other',l:'일반'},{v:'china_flg',l:'중국 Flange (×0.75)'},{v:'china_fit',l:'중국 Pipe Fitting (×0.51)'}]},
+    ],
+    multiCalcFn:function(v){
+      const q=parseFloat(v.qty)||0;
+      const t=[{m:100,f:490},{m:200,f:980},{m:300,f:1300},{m:400,f:1630},{m:500,f:1950},{m:700,f:2200},{m:900,f:2540},{m:1100,f:2930},{m:1300,f:3200},{m:1600,f:3450},{m:1900,f:3710},{m:2200,f:3900},{m:2500,f:4100},{m:2800,f:4300},{m:3100,f:4500},{m:3500,f:4700},{m:4000,f:4900}];
+      let fu=4900+200*Math.ceil((q-4000)/500);
+      for(const r of t) if(q<=r.m){fu=r.f;break;}
+      const mult={other:1,china_flg:0.75,china_fit:0.51}[v.origin||'other']||1;
+      return fu*mult;
+    },
+    multiLabelFn:function(v){ const o={other:'일반',china_flg:'중국Flange',china_fit:'중국Fitting'}; return `${o[v.origin]||''} ${v.qty||0}개`; }
+  },
+  { id:'12.9', name:'Mass Produced Gas Cylinders',
+    products:['CO2 Bottle','Gas Cylinder','Fire Extinguisher Cylinder','CO2 Cylinder'],
+    unit:'Number of Bottles',
+    inputs:[{id:'qty',type:'number',label:'수량 (개)',placeholder:'예: 100'}],
+    calcFn:function(v){ const n=v.qty; if(n<=50)return 1007; if(n<=150)return 1007+3.6*(n-50); if(n<=250)return 1367+2.5*(n-150); return 1617+(n-250); }
+  },
+  // ── Chapter 13 LNG/CCS ───────────────────────────────────────
+  { id:'13.1', name:'Boil Off Gas Compressors',
+    products:['BOG Compressor','Boil Off Gas Compressor','Cargo Compressor','Gas Compressor','LPBOG','HPBOG'],
+    unit:'Capacity (m³/hr)',
+    inputs:[
+      {id:'qty',type:'number',label:'용량 (m³/hr)',placeholder:'예: 300'},
+      {id:'bogtype',type:'select',label:'BOG 유형 / 업체',options:[{val:'bueckert',label:'부카르트만 – Full F/S 적용'},{val:'cargo',label:'그 외 업체 – Cargo BOG (×0.6)'},{val:'fuel',label:'그 외 업체 – Fuel BOG (Full F/S)'}]},
+    ],
+    note:'※ 부카르트만(Bürkert)만 Full Fee Scale 적용. 나머지 업체 Cargo BOG는 ×0.6 적용.',
+    calcFn:function(v){ return bogFU(v.qty); },
+    calcModFn:function(v,fu){ return v.bogtype==='cargo'?fu*0.6:fu; }
+  },
+  { id:'13.2', name:'Type C Tank – Liquid Gas Cargo & Fuel Tanks',
+    products:['Type C Tank','LNG Tank','Ammonia Tank','LPG Tank','Fuel Gas Tank'],
+    unit:'Tank Volume (m³)',
+    inputs:[{id:'qty',type:'number',label:'탱크 용량 (m³)',placeholder:'예: 500'}],
+    calcFn:function(v){ const n=v.qty; if(n<=100)return n*50; if(n<=500)return(n-100)*30+5000; if(n<=1000)return(n-500)*14+17000; if(n<=6000)return(n-1000)*6+24000; return(n-6000)*3+54000; }
+  },
+  { id:'13.6', name:'Cargo Containment System (GTT NO96 & MARK III/V)', multi:true,
+    products:['CCS','Cargo Containment System','GTT NO96','MARK III','Insulation Panel','Membrane','R-PUF','FSB','RSB','Pump Tower','Anchor Strip'],
+    unit:'As per table',
+    multiFields:[
+      {id:'ccsType',type:'select',label:'컴포넌트',w:'2fr',options:[
+        {v:'rpuf',l:'R-PUF (0.4 FU/Sheet)'},
+        {v:'ip',l:'Insulation Panels – IP (0.6 FU/each)'},
+        {v:'membrane',l:'Membrane Sheet (2.0 FU/each)'},
+        {v:'sus',l:'SUS Corner/Anchor Strip/Metallic (0.085 FU/kg)'},
+        {v:'sus_bolt',l:'삼우볼트공업사 Bolt/Nut – Sus corner용 (0.85 FU/kg)'},
+        {v:'rsb',l:'Rigid Secondary Barrier – RSB (0.5 FU/m²)'},
+        {v:'fsb',l:'Flexible Secondary Barrier – FSB (0.75 FU/m²)'},
+        {v:'pump',l:'Pump Tower (25 FU/Ton)'},
+        {v:'preassembly',l:'CCS Pre Assembly Unit (25 FU/Ton)'},
+      ]},
+      {id:'qty',type:'number',label:'수량/무게/면적',w:'1fr',placeholder:'예: 1000'},
+    ],
+    multiCalcFn:function(v){ const m={rpuf:0.4,ip:0.6,membrane:2.0,sus:0.085,sus_bolt:0.85,rsb:0.5,fsb:0.75,pump:25,preassembly:25}; return (m[v.ccsType]||0.4)*(parseFloat(v.qty)||0); },
+    multiLabelFn:function(v){ const lbl={rpuf:'R-PUF',ip:'IP',membrane:'Membrane',sus:'SUS Metal',sus_bolt:'삼우볼트',rsb:'RSB',fsb:'FSB',pump:'Pump Tower',preassembly:'Pre-Assy'}; return `${lbl[v.ccsType]||v.ccsType} ×${v.qty||0}`; }
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════════
+function normalize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9.\s]/g,''); }
+
+function doSearch(q) {
+  const el = document.getElementById('searchResults');
+  if(!q||q.trim().length<1){ el.innerHTML='<p class="empty-msg">검색어를 입력하세요.</p>'; return; }
+  const nq = normalize(q);
+  const hits = SECTIONS.filter(s =>
+    s.id.toLowerCase().includes(nq) ||
+    normalize(s.name).includes(nq) ||
+    s.products.some(p=>normalize(p).includes(nq))
+  );
+  if(!hits.length){ el.innerHTML='<p class="empty-msg">검색 결과가 없습니다.</p>'; return; }
+  el.innerHTML = hits.map(s=>`
+    <div class="result-item" onclick="selectSection('${s.id}')">
+      <div class="sec-id">Section ${s.id}${s.multi?'<span class="badge badge-multi">다중</span>':''}${s.special?'<span class="badge badge-special">특수</span>':''}</div>
+      <div class="sec-name">${s.name}</div>
+      <div class="sec-tags">${s.products.slice(0,7).join(' · ')}</div>
+    </div>`).join('');
+}
+
+function selectSection(id) {
+  currentSection = SECTIONS.find(s=>s.id===id);
+  if(!currentSection) return;
+  hide(['pageSearch','pageCalc','pageResult','pageVisit']);
+  show('pageSection');
+  document.getElementById('sectionDetail').innerHTML = `
+    <div class="card">
+      <div class="card-title">Section ${currentSection.id} · ${currentSection.name}${currentSection.multi?'<span class="badge badge-multi" style="margin-left:8px">다중 항목</span>':''}</div>
+      <div class="card-sub">Unit of Measure: ${currentSection.unit}</div>
+      <div style="margin-bottom:12px">${currentSection.products.map(p=>`<span class="tag">${p}</span>`).join('')}</div>
+      ${currentSection.note?`<div class="info-box">${currentSection.note}</div>`:''}
+      <button class="btn btn-primary" onclick="goToCalc()" style="width:100%;margin-top:14px">이 섹션으로 계산 →</button>
+    </div>`;
+}
+
+function goToCalc() {
+  multiRowCnt = 0;
+  hide(['pageSection','pageResult','pageVisit','pageSearch']);
+  show('pageCalc');
+  currentSection.multi ? renderMultiCalc() : renderSingleCalc();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SINGLE CALC
+// ═══════════════════════════════════════════════════════════════
+function renderSingleCalc() {
+  const s = currentSection;
+  let html = `<div class="card"><div class="card-title">Section ${s.id} · ${s.name}</div><div class="card-sub">수치를 입력하고 계산하세요.</div>`;
+  if(s.note) html+=`<div class="info-box" style="margin-bottom:10px">${s.note}</div>`;
+  for(const inp of (s.inputs||[])) {
+    html+=`<label for="inp_${inp.id}">${inp.label}</label>`;
+    if(inp.type==='number') html+=`<input type="number" id="inp_${inp.id}" placeholder="${inp.placeholder||''}" min="0" step="any">`;
+    else html+=`<select id="inp_${inp.id}">${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
+  }
+  html+=zoneRemoteHTML();
+  html+=`<div class="btn-group"><button class="btn btn-primary" onclick="calcSingle()" style="flex:2">계산하기</button><button class="btn btn-sec" onclick="showSearch()" style="flex:1">다시 검색</button></div></div>`;
+  document.getElementById('calcArea').innerHTML = html;
+}
+
+function zoneRemoteHTML() {
+  return `<div class="sep"></div>
+  <div class="two-col">
+    <div><label>Zone 선택</label>
+    <select id="inp_zone">
+      <option value="A">Zone A – KRW 202,700</option>
+      <option value="B">Zone B – KRW 474,627</option>
+      <option value="C">Zone C – KRW 746,726</option>
+      <option value="D">Zone D – KRW 1,018,710</option>
+      <option value="E">Zone E – KRW 1,290,809</option>
+      <option value="F">Zone F – As Incurred</option>
+      <option value="none">Remote / Zone 미적용</option>
+    </select></div>
+    <div><label>Survey 유형</label>
+    <select id="inp_remote">
+      <option value="direct">Direct Survey</option>
+      <option value="remote">Remote Survey (+10% / Zone 없음)</option>
+    </select></div>
+  </div>`;
+}
+
+function getSingleVals() {
+  const s = currentSection, vals = {};
+  for(const inp of (s.inputs||[])) {
+    const el = document.getElementById('inp_'+inp.id);
+    if(el) vals[inp.id] = inp.type==='number' ? parseFloat(el.value)||0 : el.value;
+  }
+  vals.zone = document.getElementById('inp_zone')?.value||'A';
+  vals.remote = document.getElementById('inp_remote')?.value||'direct';
+  return vals;
+}
+
+function calcSingle() {
+  const s = currentSection, v = getSingleVals();
+  let baseFU = s.calcFn ? s.calcFn(v) : 0;
+  let modFU = s.calcModFn ? s.calcModFn(v, baseFU) : baseFU;
+  const isRemote = v.remote==='remote';
+  if(isRemote) modFU *= 1.10;
+  const rawFee = modFU * FF;
+  const isMin = !s.noMinFee && rawFee < MIN_FEE;
+  const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
+  showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MULTI CALC
+// ═══════════════════════════════════════════════════════════════
+function renderMultiCalc() {
+  const s = currentSection;
+  const cols = s.multiFields.map(f=>f.w||'1fr').join(' ') + ' 30px';
+  let html = `<div class="card"><div class="card-title">Section ${s.id} · ${s.name} <span class="badge badge-multi">다중 항목</span></div><div class="card-sub">항목을 추가하고 합산 검사비를 계산하세요.</div>`;
+  if(s.note) html+=`<div class="info-box" style="margin-bottom:10px">${s.note}</div>`;
+  html += `<div class="multi-header" style="display:grid;grid-template-columns:${cols};gap:6px;margin-bottom:4px">`;
+  for(const f of s.multiFields) html+=`<div class="col-lbl">${f.label}</div>`;
+  html += '<div></div></div><div id="multiRows"></div>';
+  html += `<button class="add-row-btn" onclick="addMultiRow()">+ 항목 추가</button>`;
+  html += zoneRemoteHTML();
+  html += `<div class="btn-group"><button class="btn btn-primary" onclick="calcMulti()" style="flex:2">합산 계산하기</button><button class="btn btn-sec" onclick="showSearch()" style="flex:1">다시 검색</button></div></div>`;
+  document.getElementById('calcArea').innerHTML = html;
+  addMultiRow();
+}
+
+function addMultiRow() {
+  const s = currentSection;
+  const id = ++multiRowCnt;
+  const cols = s.multiFields.map(f=>f.w||'1fr').join(' ') + ' 30px';
+  const div = document.createElement('div');
+  div.id = 'mrow_'+id;
+  div.className = 'multi-row';
+  div.style.gridTemplateColumns = cols;
+  div.style.display = 'grid';
+  let inner = '';
+  for(const f of s.multiFields) {
+    if(f.type==='select') inner+=`<select id="mf_${id}_${f.id}">${(f.options||[]).map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}</select>`;
+    else inner+=`<input type="number" id="mf_${id}_${f.id}" placeholder="${f.placeholder||''}" min="0" step="any">`;
+  }
+  inner+=`<button class="del-btn" onclick="document.getElementById('mrow_${id}').remove()">×</button>`;
+  div.innerHTML = inner;
+  document.getElementById('multiRows').appendChild(div);
+}
+
+function getMultiRows() {
+  const s = currentSection;
+  const rows = document.querySelectorAll('#multiRows .multi-row');
+  return Array.from(rows).map(row=>{
+    const id = row.id.replace('mrow_','');
+    const v = {};
+    for(const f of s.multiFields) {
+      const el = document.getElementById(`mf_${id}_${f.id}`);
+      if(el) v[f.id] = f.type==='number' ? parseFloat(el.value)||0 : el.value;
+    }
+    return { v, fu: s.multiCalcFn(v), lbl: s.multiLabelFn(v) };
+  });
+}
+
+function calcMulti() {
+  const s = currentSection;
+  const lines = getMultiRows();
+  if(!lines.length){ alert('항목을 하나 이상 입력하세요.'); return; }
+  const zone = document.getElementById('inp_zone')?.value||'A';
+  const isRemote = document.getElementById('inp_remote')?.value==='remote';
+  let totalFU = lines.reduce((sum,r)=>sum+r.fu, 0);
+  if(isRemote) totalFU *= 1.10;
+  const rawFee = totalFU * FF;
+  const isMin = rawFee < MIN_FEE;
+  const zoneAmt = isRemote||zone==='none'||zone==='F' ? 0 : ZONES[zone]||0;
+  showResult(s, lines, totalFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESULT
+// ═══════════════════════════════════════════════════════════════
+function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRemote) {
+  hide(['pageCalc','pageSection','pageSearch','pageVisit']);
+  show('pageResult');
+
+  const rawProductFee = isMin ? MIN_FEE : rawFee;
+  const linesSummary = lines.length ? lines.map(l=>l.lbl).join(' / ') : '';
+
+  let lineTable = '';
+  if(lines.length>0) {
+    lineTable = `<table class="line-tbl"><thead><tr><th>항목</th><th style="text-align:right">FU</th><th style="text-align:right">금액</th></tr></thead><tbody>`;
+    lineTable += lines.map(r=>`<tr><td>${r.lbl}</td><td style="text-align:right">${r.fu.toFixed(2)}</td><td style="text-align:right">KRW ${Math.round(r.fu*FF).toLocaleString()}</td></tr>`).join('');
+    lineTable += '</tbody></table>';
+  }
+
+  const previewFee = isMin ? MIN_FEE : rawFee;
+  const previewTotal = previewFee + zoneAmt;
+
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card">
+      <div class="card-title">계산 결과 · Section ${s.id}</div>
+      <div class="card-sub">${s.name} · ${isRemote?'Remote Survey':'Direct Survey'}</div>
+      ${lineTable}
+      <div class="result-card">
+        <div class="rrow"><span class="lbl">총 Fee Units</span><span class="val">${baseFU.toFixed(2)} FU</span></div>
+        ${modFU.toFixed(2)!==baseFU.toFixed(2)?`<div class="rrow"><span class="lbl">특약 적용 후 FU</span><span class="val">${modFU.toFixed(2)} FU</span></div>`:''}
+        <div class="rrow"><span class="lbl">× Fee Factor KRW 1,225.8</span><span class="val">KRW ${Math.round(isRemote?rawFee/1.1:rawFee).toLocaleString()}</span></div>
+        ${isRemote?`<div class="rrow"><span class="lbl">Remote +10%</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:''}
+        ${isMin?`<div class="rrow warn"><span class="lbl">⚠ Min Fee 미달 → Min Fee 적용</span><span class="val">KRW ${MIN_FEE.toLocaleString()}</span></div>`:`<div class="rrow"><span class="lbl">Product Fee</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`}
+        ${zoneAmt>0?`<div class="rrow"><span class="lbl">Zonal Fee (Zone ${zone})</span><span class="val">KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
+        <div class="rrow total"><span class="lbl">예상 청구액 (분할 전)</span><span class="val">KRW ${Math.round(previewTotal).toLocaleString()}</span></div>
+      </div>
+      ${isMin?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="addToVisit({secId:'${s.id}',secName:'${s.name.replace(/'/g,"\\'")}',rawProductFee:${Math.round(previewFee)},zoneAmt:${zoneAmt},zone:'${zone}',isRemote:${isRemote},isMinFee:${isMin},linesSummary:'${linesSummary.replace(/'/g,"\\'")}'})" style="flex:2">방문 목록에 추가</button>
+        <button class="btn btn-sec" onclick="showCalc()" style="flex:1">수치 수정</button>
+      </div>
+    </div>`;
+}
+</script>
+</body>
+</html>
