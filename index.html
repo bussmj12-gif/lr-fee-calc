@@ -1263,7 +1263,7 @@ function calcSingle() {
   const isMin = !s.noMinFee && rawFee < MIN_FEE;
   const isNoSplit = s.noSplit === true;  // Min Fee 적용되나 §3.6 분할 제외
   const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
-  showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote);
+  showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1328,13 +1328,15 @@ function calcMulti() {
   const rawFee = totalFU * FF;
   const isMin = rawFee < MIN_FEE;
   const zoneAmt = isRemote||zone==='none'||zone==='F' ? 0 : ZONES[zone]||0;
-  showResult(s, lines, totalFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote);
+  const isNoSplitMulti = s.noSplit === true;
+  showResult(s, lines, totalFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplitMulti);
 }
 
 // ═══════════════════════════════════════════════════════════════
 // RESULT
 // ═══════════════════════════════════════════════════════════════
-function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRemote) {
+function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplit) {
+  isNoSplit = isNoSplit || false;
   hide(['pageCalc','pageSection','pageSearch','pageVisit']);
   show('pageResult');
 
