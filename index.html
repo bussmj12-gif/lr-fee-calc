@@ -403,8 +403,8 @@ function renderVisit() {
         ${p.zoneAmt>0?' · Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString():''}
         ${p.isRemote?' · Remote +10%':''}
       </div>
-      ${p.isMinFee && p.noSplit ? '<div class=\"pc-minfee\">⚠ Min Fee 전액 적용 (§3.6 분할 제외)</div>' : ''}
-      ${p.isMinFee && !p.noSplit && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Split 적용 (Actual KRW '+Math.round(p.rawProductFee).toLocaleString()+' → 분할 KRW '+Math.round(p.finalProductFee).toLocaleString()+')</div>' : ''}
+      ${p.isMinFee && p.noSplit ? '<div class=\"pc-minfee\">⚠ Min Fee 적용 (§3.6 분할 제외)</div>' : ''}
+      ${p.isMinFee && !p.noSplit && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Min Fee 분할 적용 (원래 KRW '+Math.round(p.rawProductFee).toLocaleString()+')</div>' : ''}
       ${p.isMinFee && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
       ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
     </div>`).join('');
@@ -1356,7 +1356,7 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
   window._pendingProject = {
     secId: s.id,
     secName: s.name,
-    rawProductFee: Math.round(previewFee),
+    rawProductFee: Math.round(rawFee),  // 실제 계산된 Product Fee (Min Fee 적용 전)
     zoneAmt: zoneAmt,
     zone: zone,
     isRemote: isRemote,
