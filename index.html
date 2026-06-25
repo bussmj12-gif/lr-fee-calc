@@ -618,31 +618,16 @@ const SECTIONS = [
     ],
     calcFn:function(v){ const sz=v.qty,len=v.len||1; let b=sz<=6?50:sz<=16?100:sz<=50?150:sz<=100?250:sz<=250?400:500; const mul={single:1,double:1.2,multi:1.4}[v.coreType]||1; return b*mul*len; }
   },
-  { id:'5.4', name:'Transformers, Converters & UPS', multi:true,
+  { id:'5.4', name:'Transformers, Converters & UPS',
     products:['Transformer','Frequency Converter','UPS','Uninterruptible Power Supply'],
     unit:'Power (kVA)',
-    note:'※ 각 kVA로 개별 FU 산출 후 합산. 총 대수 3-4대: -10%, 5대 이상: -20% 할인 적용.',
-    multiFields:[
-      {id:'kva',type:'number',label:'정격 출력 (kVA)',w:'2fr',placeholder:'예: 1000'},
-      {id:'units',type:'number',label:'대수',w:'1fr',placeholder:'1'},
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kVA)',placeholder:'예: 1000'},
+      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1-2대'},{val:'34',label:'3-4대 (-10%)'},{val:'5',label:'5대 이상 (-20%)'}]},
     ],
-    multiCalcFn:function(v){
-      const p=parseFloat(v.kva)||0;
-      const t=[{m:100,f:500},{m:150,f:700},{m:200,f:860},{m:300,f:1020},{m:400,f:1110},{m:500,f:1200},{m:1000,f:1500},{m:1500,f:1875},{m:2000,f:2250},{m:2500,f:2438},{m:3000,f:2625},{m:3500,f:2813},{m:4000,f:3000},{m:4500,f:3188},{m:5000,f:3375},{m:6000,f:3750},{m:7000,f:4125},{m:8000,f:4500},{m:9000,f:4875}];
-      let fuPerUnit=4875+75*Math.ceil((p-9000)/200);
-      for(const r of t) if(p<=r.m){fuPerUnit=r.f;break;}
-      return fuPerUnit*(parseInt(v.units)||1);
-    },
-    multiLabelFn:function(v){ return `${v.kva||0}kVA × ${v.units||1}대`; },
-    multiPostFn:function(lines){
-      // 총 대수 합산 후 할인 적용
-      const totalUnits=lines.reduce((s,r)=>s+(parseInt(r.v.units)||1),0);
-      let disc=1;
-      if(totalUnits>=5) disc=0.80;
-      else if(totalUnits>=3) disc=0.90;
-      const totalFU=lines.reduce((s,r)=>s+r.fu,0);
-      return { totalFU: totalFU*disc, disc, totalUnits };
-    },
+    note:'※ 여러 대인 경우 각각 개별 kVA로 FU를 산출한 후 합산합니다.',
+    calcFn:function(v){ const p=v.qty; const t=[{m:100,f:500},{m:150,f:700},{m:200,f:860},{m:300,f:1020},{m:400,f:1110},{m:500,f:1200},{m:1000,f:1500},{m:1500,f:1875},{m:2000,f:2250},{m:2500,f:2438},{m:3000,f:2625},{m:3500,f:2813},{m:4000,f:3000},{m:4500,f:3188},{m:5000,f:3375},{m:6000,f:3750},{m:7000,f:4125},{m:8000,f:4500},{m:9000,f:4875}]; for(const r of t) if(p<=r.m) return r.f; return 4875+75*Math.ceil((p-9000)/200); },
+    calcModFn:function(v,fu){ if(v.qty2==='34')return fu*0.90; if(v.qty2==='5')return fu*0.80; return fu; }
   },
   { id:'5.5', name:'Bus Bar Trunking System',
     products:['Busbar','Bus Bar Trunking','Busduct'],
@@ -1139,14 +1124,24 @@ const SECTIONS = [
   { id:'12.4', name:'Shell Type Heat Exchangers & Electrical Heaters', multi:true,
     products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
     unit:'Cooling Surface (m²)',
-    note:'FN: 각 제품의 개별 Fee를 합산하여 최종 청구합니다.',
+    note:'※ Shell made from Plate → 12.4(Shell HX) 요율 / Shell made from Pipe → 12.3(Plate HX) 요율 / Electrical Heater → 12.4 요율 ×1.2',
     multiFields:[
-      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.3fr',placeholder:'예: 100'},
-      {id:'htType',type:'select',label:'유형',w:'1.3fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
+      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.2fr',placeholder:'예: 100'},
+      {id:'shellMat',type:'select',label:'Shell 재질',w:'1.4fr',options:[{v:'plate',l:'Shell from Plate → 12.4 요율'},{v:'pipe',l:'Shell from Pipe → 12.3 요율'}]},
+      {id:'htType',type:'select',label:'유형',w:'1.2fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
       {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
     ],
-    multiCalcFn:function(v){ let fu=shellTHXFU(parseFloat(v.area)||0); if(v.htType==='elec')fu*=1.2; return fu*(parseInt(v.qty)||1); },
-    multiLabelFn:function(v){ const t={hx:'Shell HX',elec:'Elec Heater'}; return `${t[v.htType]||''} ${v.area||0}m² ×${v.qty||1}`; }
+    multiCalcFn:function(v){
+      const area=parseFloat(v.area)||0;
+      let fu = v.shellMat==='pipe' ? plateTHXFU(area) : shellTHXFU(area);
+      if(v.htType==='elec') fu*=1.2;
+      return fu*(parseInt(v.qty)||1);
+    },
+    multiLabelFn:function(v){
+      const t={hx:'Shell HX',elec:'Elec Heater'};
+      const m={plate:'[Plate/12.4]',pipe:'[Pipe/12.3]'};
+      return `${t[v.htType]||''} ${m[v.shellMat]||''} ${v.area||0}m² ×${v.qty||1}`;
+    }
   },
   { id:'12.5', name:'Box Coolers',
     products:['Box Cooler','Keel Cooler'],
@@ -1402,18 +1397,7 @@ function calcMulti() {
   if(!lines.length){ alert('항목을 하나 이상 입력하세요.'); return; }
   const zone = document.getElementById('inp_zone')?.value||'A';
   const isRemote = document.getElementById('inp_remote')?.value==='remote';
-
-  let totalFU, discLabel='';
-  if(s.multiPostFn) {
-    const post = s.multiPostFn(lines);
-    totalFU = post.totalFU;
-    if(post.disc<1) discLabel = `총 ${post.totalUnits}대 → ${Math.round((1-post.disc)*100)}% 할인 적용`;
-    // 할인 내역을 lines summary에 추가
-    if(discLabel) lines._discLabel = discLabel;
-  } else {
-    totalFU = lines.reduce((sum,r)=>sum+r.fu, 0);
-  }
-
+  let totalFU = lines.reduce((sum,r)=>sum+r.fu, 0);
   if(isRemote) totalFU *= 1.10;
   const rawFee = totalFU * FF;
   const isMin = rawFee < MIN_FEE;
@@ -1437,7 +1421,6 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
   if(lines.length>0) {
     lineTable = `<table class="line-tbl"><thead><tr><th>항목</th><th style="text-align:right">FU</th><th style="text-align:right">금액</th></tr></thead><tbody>`;
     lineTable += lines.map(r=>`<tr><td>${r.lbl}</td><td style="text-align:right">${r.fu.toFixed(2)}</td><td style="text-align:right">KRW ${Math.round(r.fu*FF).toLocaleString()}</td></tr>`).join('');
-    if(lines._discLabel) lineTable += `<tr><td colspan="3" style="color:var(--success);font-weight:600;padding:5px 8px;">✓ ${lines._discLabel}</td></tr>`;
     lineTable += '</tbody></table>';
   }
 
