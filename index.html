@@ -117,13 +117,16 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 .visit-summary .vs-total { font-size: 22px; font-weight: 700; }
 .visit-summary .vs-detail { font-size: 12px; opacity: .8; margin-top: 4px; }
 .project-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; background: #fff; position: relative; }
-.project-card .pc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.project-card .pc-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.project-card .pc-fee { font-size: 14px; font-weight: 700; color: var(--primary); }
+.project-card .pc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
+.project-card .pc-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+.project-card .pc-fee { font-size: 14px; font-weight: 700; color: var(--primary); white-space: nowrap; }
 .project-card .pc-detail { font-size: 11px; color: var(--text2); }
 .project-card .pc-minfee { font-size: 11px; color: var(--warning); font-weight: 600; }
-.project-card .pc-del { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border: 1px solid var(--border2); border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; color: var(--text2); }
-.project-card .pc-del:hover { background: var(--danger-light); color: var(--danger); }
+.project-card .pc-actions { display: flex; gap: 6px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.project-card .pc-del { flex: 1; padding: 5px; font-size: 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: #fff; cursor: pointer; color: var(--text2); }
+.project-card .pc-del:hover { background: var(--danger-light); color: var(--danger); border-color: var(--danger); }
+.project-card .pc-edit { flex: 2; padding: 5px; font-size: 12px; border: 1px solid var(--primary); border-radius: var(--radius-sm); background: var(--primary-light); cursor: pointer; color: var(--primary); font-weight: 500; }
+.project-card .pc-edit:hover { background: var(--primary); color: #fff; }
 
 .back-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text2); background: none; border: none; cursor: pointer; margin-bottom: 14px; padding: 0; }
 .back-btn:hover { color: var(--text); }
@@ -393,7 +396,6 @@ function renderVisit() {
   // Project cards
   list.innerHTML = visitProjects.map((p,i)=>`
     <div class="project-card">
-      <button class="pc-del" onclick="removeProject(${i})">×</button>
       <div class="pc-header">
         <div class="pc-title"><span style="display:inline-block;background:var(--primary);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px;margin-right:6px;">${i+1}</span>Section ${p.secId} · ${p.secName}</div>
         <div class="pc-fee">KRW ${Math.round(p.finalTotal).toLocaleString()}</div>
@@ -407,6 +409,10 @@ function renderVisit() {
       ${p.isMinFee && !p.noSplit && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Min Fee 분할 적용 (원래 KRW '+Math.round(p.rawProductFee).toLocaleString()+')</div>' : ''}
       ${p.isMinFee && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
       ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
+      <div class="pc-actions">
+        <button class="pc-edit" onclick="editProject(${i})">✎ 수정</button>
+        <button class="pc-del" onclick="removeProject(${i})">🗑 삭제</button>
+      </div>
     </div>`).join('');
 
   // Min fee note
@@ -420,8 +426,32 @@ function renderVisit() {
 }
 
 function removeProject(i) {
-  visitProjects.splice(i,1);
+  if(confirm('프로젝트 ' + (i+1) + '번을 삭제하시겠습니까?')) {
+    visitProjects.splice(i,1);
+    renderVisit();
+  }
+}
+
+function editProject(i) {
+  // 해당 프로젝트 삭제 후 해당 섹션 계산 화면으로 이동
+  const p = visitProjects[i];
+  visitProjects.splice(i, 1);
   renderVisit();
+  // 섹션 찾기
+  const sec = SECTIONS.find(s => s.id === p.secId);
+  if(sec) {
+    currentSection = sec;
+    hide(['pageVisit','pageResult']);
+    show('pageSection');
+    document.getElementById('sectionDetail').innerHTML = `
+      <div class="card">
+        <div class="card-title">Section ${sec.id} · ${sec.name}${sec.multi?'<span class="badge badge-multi" style="margin-left:8px">다중 항목</span>':''}</div>
+        <div class="card-sub">Unit of Measure: ${sec.unit}</div>
+        <div style="margin-bottom:12px">${sec.products.map(p=>'<span class="tag">'+p+'</span>').join('')}</div>
+        ${sec.note?'<div class="info-box">'+sec.note+'</div>':''}
+        <button class="btn btn-primary" onclick="goToCalc()" style="width:100%;margin-top:14px">이 섹션으로 계산 →</button>
+      </div>`;
+  }
 }
 
 function addToVisit(project) {
