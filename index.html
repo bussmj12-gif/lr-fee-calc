@@ -665,7 +665,15 @@ const SECTIONS = [
       {id:'simul',type:'select',label:'동시 검사 수량',options:[{val:'no',label:'1–3 systems'},{val:'yes',label:'4개 이상 동시 (-20%)'}]},
     ],
     calcFn:function(v){ return {ams:1000,rcs:1000,egcs:1000,console:600,pms:600}[v.sysType]||600; },
-    calcModFn:function(v,fu){ let m=1; const ar=v.sysType==='ams'||v.sysType==='rcs'; if(ar&&v.twin==='yes')m*=1.50; if(ar&&v.gas==='yes')m*=1.50; if(v.simul==='yes')m*=0.80; return fu*m; }
+    calcModFn:function(v,fu){ 
+      const ar=v.sysType==='ams'||v.sysType==='rcs';
+      let add=0;
+      if(ar&&v.twin==='yes') add+=0.50;
+      if(ar&&v.gas==='yes') add+=0.50;
+      let result=fu*(1+add);
+      if(v.simul==='yes') result*=0.80;
+      return result;
+    }
   },
   { id:'5.8', name:'Local, Individual, Group Starter Panels',
     products:['Local Starter Panel','Starter Panel','Group Starter','Individual Panel'],
