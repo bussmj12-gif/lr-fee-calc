@@ -498,7 +498,7 @@ const SECTIONS = [
     ],
     multiCalcFn:function(v){
       const w=parseFloat(v.wt)||0;
-      let fu=w<=20000?12*w/100:1200+6*(w/100);
+      let fu=w<=20000?12*w/100:1200+6*((w-20000)/100);
       let m=1;
       if(v.site==='mfr'){ if(v.cond==='rough')m*=0.90; if(v.cond==='ascast')m*=0.80; }
       else { if(v.cond==='ascast')m*=0.30; if(v.cond==='rough')m*=0.20; }
@@ -518,7 +518,7 @@ const SECTIONS = [
     ],
     multiCalcFn:function(v){
       const w=parseFloat(v.wt)||0;
-      let fu=w<=20000?16*w/100:1600+8*(w/100);
+      let fu=w<=20000?16*w/100:1600+8*((w-20000)/100);
       let m=1;
       if(v.site==='mfr'){ if(v.cond==='rough')m*=0.90; if(v.cond==='asforged')m*=0.80; }
       else { if(v.cond==='asforged')m*=0.30; if(v.cond==='rough')m*=0.20; }
@@ -567,19 +567,19 @@ const SECTIONS = [
       {id:'pipeType',type:'select',label:'파이프 유형',options:[{val:'sw',label:'Seamless/Welded'},{val:'ss',label:'Stainless Steel (+20%)'}]},
       {id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 5000'},
     ],
-    calcFn:function(v){ const w=v.qty,ss=v.pipeType==='ss'; return w<=20000?(ss?9.6:8)*w/100:(ss?1920:1600)+(ss?4.8:4)*(w/100); }
+    calcFn:function(v){ const w=v.qty,ss=v.pipeType==='ss'; return w<=20000?(ss?9.6:8)*w/100:(ss?1920:1600)+(ss?4.8:4)*((w-20000)/100); }
   },
   { id:'4.7', name:'Pipe & Tube (Aluminium Alloy)',
     products:['Aluminium Pipe','Aluminium Tube','Al Pipe'],
     unit:'Weight (kg)',
     inputs:[{id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 2000'}],
-    calcFn:function(v){ return v.qty<=20000?11.2*v.qty/100:2240+5.6*(v.qty/100); }
+    calcFn:function(v){ return v.qty<=20000?11.2*v.qty/100:2240+5.6*((v.qty-20000)/100); }
   },
   { id:'4.8', name:'Pipe & Tube (Copper Alloy)',
     products:['Copper Pipe','Copper Alloy Tube','CuNi Pipe','Cu Pipe'],
     unit:'Weight (kg)',
     inputs:[{id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 1000'}],
-    calcFn:function(v){ return v.qty<=5000?50*v.qty/100:2500+30*(v.qty/100); }
+    calcFn:function(v){ return v.qty<=5000?50*v.qty/100:2500+30*((v.qty-5000)/100); }
   },
   // ── Chapter 5 Electrical ─────────────────────────────────────
   { id:'5.1', name:'Motors',
@@ -787,7 +787,7 @@ const SECTIONS = [
     products:['Anchor','Cast Steel Anchor','Forged Anchor','Fabricated Anchor','Stockless Anchor'],
     unit:'Weight (kg)',
     inputs:[{id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 3000'}],
-    calcFn:function(v){ return v.qty<=20000?13.2*v.qty/100:1320+6.6*(v.qty/100); }
+    calcFn:function(v){ return v.qty<=20000?13.2*v.qty/100:1320+6.6*((v.qty-20000)/100); }
   },
   { id:'8.2', name:'Chain Cables & Fittings',
     products:['Chain Cable','Anchor Chain','Mooring Chain','Chafing Chain','Chain Fitting'],
