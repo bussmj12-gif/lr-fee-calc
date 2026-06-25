@@ -529,12 +529,22 @@ const SECTIONS = [
   },
   { id:'4.5', name:'Testing / Retesting / Validation of Materials',
     products:['Material Testing','Heat Number','Charge Number','Retesting','Transfer of Marks','Lab Attendance'],
-    unit:'Heat Number', noMinFee:true,
+    unit:'Heat Number', noSplit:true,
+    note:'※ Small cut-out (1톤 미만 소량 시편): 1 project 내 max 5 heat number까지 550 FU 고정 적용.',
     inputs:[
+      {id:'testType',type:'select',label:'검사 유형',options:[
+        {val:'normal',label:'일반 Testing/Retesting (1st heat: 550 FU, 추가 heat: +150 FU)'},
+        {val:'small',label:'Small cut-out below 1-ton (max 5 heat number) – 550 FU 고정'},
+      ]},
       {id:'qty',type:'number',label:'Heat Number 수량',placeholder:'예: 3'},
+      {id:'wt',type:'number',label:'총 중량 (ton) — 참고용',placeholder:'예: 0.5'},
       {id:'mat',type:'select',label:'재질 특약',options:[{val:'none',label:'Carbon Steel'},{val:'ss',label:'Stainless Steel (+20%)'},{val:'cu',label:'Copper Alloy (+20%)'},{val:'alloy',label:'Alloy Steel (+30%)'},{val:'al',label:'Aluminium (+40%)'},{val:'fg',label:'Forgings (+20%)'},{val:'cs',label:'Castings (+20%)'}]},
     ],
-    calcFn:function(v){ const n=Math.max(1,parseInt(v.qty)||1); return n===1?550:550+(n-1)*150; },
+    calcFn:function(v){
+      if(v.testType==='small') return 550;
+      const n=Math.max(1,parseInt(v.qty)||1);
+      return n===1?550:550+(n-1)*150;
+    },
     calcModFn:function(v,fu){ let m=1; if(v.mat==='ss'||v.mat==='cu'||v.mat==='fg'||v.mat==='cs')m*=1.20; if(v.mat==='alloy')m*=1.30; if(v.mat==='al')m*=1.40; return fu*m; }
   },
   { id:'4.6', name:'Pipe & Tube (Seamless/Welded/Stainless Steel)',
@@ -561,7 +571,7 @@ const SECTIONS = [
   // ── Chapter 5 Electrical ─────────────────────────────────────
   { id:'5.1', name:'Motors',
     products:['AC Motor','DC Motor','Propulsion Motor','Electric Motor','Motor'],
-    unit:'Power (kW)', noMinFee:true,
+    unit:'Power (kW)', noSplit:true,
     inputs:[
       {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
       {id:'hv',type:'select',label:'전압',options:[{val:'lv',label:'Low Voltage'},{val:'hv',label:'High Voltage DC≥1500V/AC≥1000V (+20%)'}]},
@@ -574,7 +584,7 @@ const SECTIONS = [
   },
   { id:'5.2', name:'Generators',
     products:['AC Generator','DC Generator','Propulsion Generator','Alternator','Generator'],
-    unit:'Power (kW)', noMinFee:true,
+    unit:'Power (kW)', noSplit:true,
     inputs:[
       {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 1000'},
       {id:'hv',type:'select',label:'전압',options:[{val:'lv',label:'Low Voltage'},{val:'hv',label:'High Voltage (+20%)'}]},
@@ -680,7 +690,7 @@ const SECTIONS = [
   },
   { id:'6.2', name:'Auxiliary Oil Engines',
     products:['Auxiliary Engine','Generator Engine','Aux Engine','Diesel Generator','D/G'],
-    unit:'Power (kW)', noMinFee:true,
+    unit:'Power (kW)', noSplit:true,
     inputs:[
       {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
       {id:'dualfuel',type:'select',label:'Dual Fuel',options:[{val:'no',label:'일반'},{val:'yes',label:'Dual Fuel (+20%)'}]},
