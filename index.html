@@ -350,7 +350,7 @@ function renderVisit() {
   }
 
   // Min Fee 미달 프로젝트 파악 후 §3.6 분할 재계산
-  const minFeeProjs = visitProjects.filter(p=>p.isMinFee);
+  const minFeeProjs = visitProjects.filter(p=>p.isMinFee && !p.noSplit);
   const n = minFeeProjs.length;
   const split = splitMinFee(n);  // §3.6 분할 후 최소 보장액
   const totalMult = Math.ceil(n/3);
@@ -363,8 +363,12 @@ function renderVisit() {
       // Min Fee 초과 프로젝트 → Actual Fee 그대로
       p.finalProductFee = p.rawProductFee;
       p.splitApplied = false;
+    } else if(p.noSplit) {
+      // Min Fee 미달이지만 §3.6 분할 제외 → Min Fee 전액
+      p.finalProductFee = MIN_FEE;
+      p.splitApplied = false;
     } else {
-      // Min Fee 미달 → Actual Fee vs Split Fee 중 큰 값 적용
+      // Min Fee 미달 + 분할 대상 → Actual vs Split 중 큰 값
       if(p.rawProductFee > split) {
         p.finalProductFee = p.rawProductFee;
         p.splitApplied = false;
@@ -399,8 +403,9 @@ function renderVisit() {
         ${p.zoneAmt>0?' · Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString():''}
         ${p.isRemote?' · Remote +10%':''}
       </div>
-      ${p.isMinFee && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Split 적용 (Actual KRW '+Math.round(p.rawProductFee).toLocaleString()+' → KRW '+Math.round(p.finalProductFee).toLocaleString()+')</div>' : ''}
-      ${p.isMinFee && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee (Split 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
+      ${p.isMinFee && p.noSplit ? '<div class=\"pc-minfee\">⚠ Min Fee 전액 적용 (§3.6 분할 제외)</div>' : ''}
+      ${p.isMinFee && !p.noSplit && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Split 적용 (Actual KRW '+Math.round(p.rawProductFee).toLocaleString()+' → 분할 KRW '+Math.round(p.finalProductFee).toLocaleString()+')</div>' : ''}
+      ${p.isMinFee && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
       ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
     </div>`).join('');
 
@@ -755,7 +760,7 @@ const SECTIONS = [
   },
   { id:'8.4', name:'Accommodation Ladder & Associated Winch and Standard Gangway',
     products:['Accommodation Ladder','Gangway','Standard Gangway','Pilot Ladder Winch'],
-    unit:'Quantity', noMinFee:true,
+    unit:'Quantity', noSplit:true,
     inputs:[
       {id:'ladderQty',type:'number',label:'Ladder 수량',placeholder:'예: 1'},
       {id:'gangwayQty',type:'number',label:'Gangway 수량',placeholder:'예: 1'},
@@ -1011,7 +1016,7 @@ const SECTIONS = [
   },
   { id:'11.6', name:'Watertight/Weathertight Small Hatches & Doors',
     products:['Watertight Door','Weathertight Door','Watertight Hatch','WT Door','WT Hatch','Pilot Door'],
-    unit:'Quantity', noMinFee:true,
+    unit:'Quantity', noSplit:true,
     inputs:[
       {id:'qty',type:'number',label:'수량 (도어/해치)',placeholder:'예: 10'},
       {id:'passenger',type:'select',label:'Passenger/Mega Yacht',options:[{val:'no',label:'일반'},{val:'yes',label:'Passenger/Mega Yacht (×2)'}]},
@@ -1256,6 +1261,7 @@ function calcSingle() {
   if(isRemote) modFU *= 1.10;
   const rawFee = modFU * FF;
   const isMin = !s.noMinFee && rawFee < MIN_FEE;
+  const isNoSplit = s.noSplit === true;  // Min Fee 적용되나 §3.6 분할 제외
   const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
   showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote);
 }
@@ -1353,6 +1359,7 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
     zone: zone,
     isRemote: isRemote,
     isMinFee: isMin,
+    noSplit: isNoSplit,
     linesSummary: linesSummary
   };
 
