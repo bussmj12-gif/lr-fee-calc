@@ -623,11 +623,20 @@ const SECTIONS = [
     unit:'Power (kVA)',
     inputs:[
       {id:'qty',type:'number',label:'정격 출력 (kVA)',placeholder:'예: 1000'},
-      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1-2대'},{val:'34',label:'3-4대 (-10%)'},{val:'5',label:'5대 이상 (-20%)'}]},
+      {id:'units',type:'number',label:'대수',placeholder:'예: 3'},
     ],
-    note:'※ 여러 대인 경우 각각 개별 kVA로 FU를 산출한 후 합산합니다.',
-    calcFn:function(v){ const p=v.qty; const t=[{m:100,f:500},{m:150,f:700},{m:200,f:860},{m:300,f:1020},{m:400,f:1110},{m:500,f:1200},{m:1000,f:1500},{m:1500,f:1875},{m:2000,f:2250},{m:2500,f:2438},{m:3000,f:2625},{m:3500,f:2813},{m:4000,f:3000},{m:4500,f:3188},{m:5000,f:3375},{m:6000,f:3750},{m:7000,f:4125},{m:8000,f:4500},{m:9000,f:4875}]; for(const r of t) if(p<=r.m) return r.f; return 4875+75*Math.ceil((p-9000)/200); },
-    calcModFn:function(v,fu){ if(v.qty2==='34')return fu*0.90; if(v.qty2==='5')return fu*0.80; return fu; }
+    note:'※ 여러 대인 경우 각각 개별 kVA로 FU를 산출한 후 합산합니다. 총 3-4대: -10%, 5대 이상: -20% 할인 적용.',
+    calcFn:function(v){
+      const p=v.qty;
+      const t=[{m:100,f:500},{m:150,f:700},{m:200,f:860},{m:300,f:1020},{m:400,f:1110},{m:500,f:1200},{m:1000,f:1500},{m:1500,f:1875},{m:2000,f:2250},{m:2500,f:2438},{m:3000,f:2625},{m:3500,f:2813},{m:4000,f:3000},{m:4500,f:3188},{m:5000,f:3375},{m:6000,f:3750},{m:7000,f:4125},{m:8000,f:4500},{m:9000,f:4875}];
+      let fuPerUnit=4875+75*Math.ceil((p-9000)/200);
+      for(const r of t) if(p<=r.m){fuPerUnit=r.f;break;}
+      const n=Math.max(1,parseInt(v.units)||1);
+      const totalFU=fuPerUnit*n;
+      if(n>=5) return totalFU*0.80;
+      if(n>=3) return totalFU*0.90;
+      return totalFU;
+    },
   },
   { id:'5.5', name:'Bus Bar Trunking System',
     products:['Busbar','Bus Bar Trunking','Busduct'],
