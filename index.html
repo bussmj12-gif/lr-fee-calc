@@ -1121,27 +1121,34 @@ const SECTIONS = [
     multiCalcFn:function(v){ return plateTHXFU(parseFloat(v.area)||0)*(parseInt(v.qty)||1); },
     multiLabelFn:function(v){ return `PHE ${v.area||0}m² ×${v.qty||1}`; }
   },
-  { id:'12.4', name:'Shell Type Heat Exchangers & Electrical Heaters', multi:true,
+  { id:'12.4', name:'Shell Type Heat Exchangers & Electrical Heaters',
     products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
     unit:'Cooling Surface (m²)',
-    note:'※ Shell made from Plate → 12.4(Shell HX) 요율 / Shell made from Pipe → 12.3(Plate HX) 요율 / Electrical Heater → 12.4 요율 ×1.2',
+    shellRouter: true,  // 섹션 상세에서 Shell 재질 선택 분기
+  },
+  { id:'12.4P', name:'Shell Type HX & Electrical Heaters — Shell from Plate (12.4 요율)', multi:true,
+    products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
+    unit:'Cooling Surface (m²)',
+    note:'※ Shell made from Plate → 12.4 요율(shellTHXFU) 적용. 각 제품 개별 Fee 합산.',
     multiFields:[
-      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.2fr',placeholder:'예: 100'},
-      {id:'shellMat',type:'select',label:'Shell 재질',w:'1.4fr',options:[{v:'plate',l:'Shell from Plate → 12.4 요율'},{v:'pipe',l:'Shell from Pipe → 12.3 요율'}]},
-      {id:'htType',type:'select',label:'유형',w:'1.2fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
+      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.5fr',placeholder:'예: 100'},
+      {id:'htType',type:'select',label:'유형',w:'1.5fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
       {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
     ],
-    multiCalcFn:function(v){
-      const area=parseFloat(v.area)||0;
-      let fu = v.shellMat==='pipe' ? plateTHXFU(area) : shellTHXFU(area);
-      if(v.htType==='elec') fu*=1.2;
-      return fu*(parseInt(v.qty)||1);
-    },
-    multiLabelFn:function(v){
-      const t={hx:'Shell HX',elec:'Elec Heater'};
-      const m={plate:'[Plate/12.4]',pipe:'[Pipe/12.3]'};
-      return `${t[v.htType]||''} ${m[v.shellMat]||''} ${v.area||0}m² ×${v.qty||1}`;
-    }
+    multiCalcFn:function(v){ let fu=shellTHXFU(parseFloat(v.area)||0); if(v.htType==='elec')fu*=1.2; return fu*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ const t={hx:'Shell HX',elec:'Elec Heater'}; return `${t[v.htType]||''} ${v.area||0}m² ×${v.qty||1}`; }
+  },
+  { id:'12.4P2', name:'Shell Type HX & Electrical Heaters — Shell from Pipe (12.3 요율)', multi:true,
+    products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
+    unit:'Cooling Surface (m²)',
+    note:'※ Shell made from Pipe → 12.3 요율(plateTHXFU) 적용. 각 제품 개별 Fee 합산.',
+    multiFields:[
+      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.5fr',placeholder:'예: 100'},
+      {id:'htType',type:'select',label:'유형',w:'1.5fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
+      {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
+    ],
+    multiCalcFn:function(v){ let fu=plateTHXFU(parseFloat(v.area)||0); if(v.htType==='elec')fu*=1.2; return fu*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ const t={hx:'Shell HX [Pipe/12.3]',elec:'Elec Heater [Pipe/12.3]'}; return `${t[v.htType]||''} ${v.area||0}m² ×${v.qty||1}`; }
   },
   { id:'12.5', name:'Box Coolers',
     products:['Box Cooler','Keel Cooler'],
@@ -1242,11 +1249,12 @@ function doSearch(q) {
   const el = document.getElementById('searchResults');
   if(!q||q.trim().length<1){ el.innerHTML='<p class="empty-msg">검색어를 입력하세요.</p>'; return; }
   const nq = normalize(q);
-  const hits = SECTIONS.filter(s =>
-    s.id.toLowerCase().includes(nq) ||
-    normalize(s.name).includes(nq) ||
-    s.products.some(p=>normalize(p).includes(nq))
-  );
+  const hits = SECTIONS.filter(s => {
+    if(['12.4P','12.4P2'].includes(s.id)) return false;
+    return s.id.toLowerCase().includes(nq) ||
+      normalize(s.name).includes(nq) ||
+      s.products.some(p=>normalize(p).includes(nq));
+  });
   if(!hits.length){ el.innerHTML='<p class="empty-msg">검색 결과가 없습니다.</p>'; return; }
   el.innerHTML = hits.map(s=>`
     <div class="result-item" onclick="selectSection('${s.id}')">
@@ -1261,6 +1269,31 @@ function selectSection(id) {
   if(!currentSection) return;
   hide(['pageSearch','pageCalc','pageResult','pageVisit']);
   show('pageSection');
+
+  // Shell Router 분기 (12.4)
+  if(currentSection.shellRouter) {
+    document.getElementById('sectionDetail').innerHTML = `
+      <div class="card">
+        <div class="card-title">Section ${currentSection.id} · ${currentSection.name}</div>
+        <div class="card-sub">Shell Body 재질을 선택하세요.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+          <div onclick="selectSection('12.4P')" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;transition:border-color .15s,box-shadow .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(10,92,158,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+            <div style="font-size:28px;margin-bottom:8px">🔩</div>
+            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">Shell made from Plate</div>
+            <div style="font-size:12px;color:var(--primary);font-weight:600">12.4 요율 적용</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">shellTHXFU 기준</div>
+          </div>
+          <div onclick="selectSection('12.4P2')" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;transition:border-color .15s,box-shadow .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(10,92,158,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+            <div style="font-size:28px;margin-bottom:8px">🪣</div>
+            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">Shell made from Pipe</div>
+            <div style="font-size:12px;color:var(--primary);font-weight:600">12.3 요율 적용</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">plateTHXFU 기준</div>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
   document.getElementById('sectionDetail').innerHTML = `
     <div class="card">
       <div class="card-title">Section ${currentSection.id} · ${currentSection.name}${currentSection.multi?'<span class="badge badge-multi" style="margin-left:8px">다중 항목</span>':''}</div>
