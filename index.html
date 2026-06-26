@@ -919,6 +919,8 @@ const SECTIONS = [
   { id:'9.8', name:'Steel Wire & Fibre Ropes',
     products:['Steel Wire Rope','Fibre Rope','Wire Rope','Mooring Line','Towing Wire'],
     unit:'Project ID Quantity',
+    note:'※ Zone 요금은 5개 항목(Project ID)마다 1회 적용됩니다. 수량은 검사비에 영향 없음.',
+    zonePerGroup: 5,  // 5개당 Zone 1회
     inputs:[
       {id:'ropeType',type:'select',label:'유형',options:[
         {val:'single',label:'Fibre/Wire rope Single Lay Sling (88+0.012×MBL FU)'},
@@ -930,10 +932,9 @@ const SECTIONS = [
         {val:'length',label:'Length Measuring – 134 FU'},
       ]},
       {id:'mbl',type:'number',label:'MBL (kN) 또는 SWL (Ton) — 해당 유형만',placeholder:'예: 500'},
-      {id:'qty',type:'number',label:'수량',placeholder:'예: 1'},
+      {id:'itemCount',type:'number',label:'항목 수 (Project ID 수)',placeholder:'예: 3'},
     ],
     calcFn:function(v){
-      const q=parseInt(v.qty)||1;
       let fu=0;
       if(v.ropeType==='single') fu=88+0.012*(parseFloat(v.mbl)||0);
       else if(v.ropeType==='imca') fu=293;
@@ -942,7 +943,7 @@ const SECTIONS = [
       else if(v.ropeType==='destruct') fu=294;
       else if(v.ropeType==='recert') fu=53;
       else if(v.ropeType==='length') fu=134;
-      return fu*q;
+      return fu;
     }
   },
   { id:'9.9', name:'Winches for Cargo Gear and Other Winches',
@@ -1407,8 +1408,16 @@ function calcSingle() {
   if(isRemote) modFU *= 1.10;
   const rawFee = modFU * FF;
   const isMin = !s.noMinFee && rawFee < MIN_FEE;
-  const isNoSplit = s.noSplit === true;  // Min Fee 적용되나 §3.6 분할 제외
-  const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
+  const isNoSplit = s.noSplit === true;
+
+  // zonePerGroup: Zone 요금을 n개당 1회만 적용
+  let zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
+  if(s.zonePerGroup && zoneAmt > 0) {
+    const itemCount = Math.max(1, parseInt(v.itemCount)||1);
+    const groups = Math.ceil(itemCount / s.zonePerGroup);
+    zoneAmt = zoneAmt * groups;
+  }
+
   showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit);
 }
 
@@ -1532,7 +1541,7 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
         <div class="rrow"><span class="lbl">× Fee Factor KRW 1,225.8</span><span class="val">KRW ${Math.round(isRemote?rawFee/1.1:rawFee).toLocaleString()}</span></div>
         ${isRemote?`<div class="rrow"><span class="lbl">Remote +10%</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:''}
         ${isMin?`<div class="rrow warn"><span class="lbl">⚠ Min Fee 미달 → Min Fee 적용</span><span class="val">KRW ${MIN_FEE.toLocaleString()}</span></div>`:`<div class="rrow"><span class="lbl">Product Fee</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`}
-        ${zoneAmt>0?`<div class="rrow"><span class="lbl">Zonal Fee (Zone ${zone})</span><span class="val">KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
+        ${zoneAmt>0?`<div class="rrow"><span class="lbl">Zonal Fee (Zone ${zone})${currentSection&&currentSection.zonePerGroup?' ['+Math.ceil((parseInt(getSingleVals&&getSingleVals()&&getSingleVals().itemCount)||1)/currentSection.zonePerGroup)+'회 적용]':''}</span><span class="val">KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
         <div class="rrow total"><span class="lbl">예상 청구액 (분할 전)</span><span class="val">KRW ${Math.round(previewTotal).toLocaleString()}</span></div>
       </div>
       ${isMin?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
