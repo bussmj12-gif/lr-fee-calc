@@ -263,9 +263,42 @@ function emergEngFU(p) {
   return 28660.19+Math.ceil((p-10000)/500)*895.63;
 }
 function upvFU(v, cls) {
-  const rows=[{m:500,c1:216,c2:180.25,c3:162,al:234},{m:1000,c1:433,c2:360.5,c3:324,al:469},{m:2000,c1:865,c2:721,c3:649,al:937},{m:5000,c1:2100,c2:1750,c3:1575,al:2275},{m:10000,c1:2767,c2:2306,c3:2075,al:2998},{m:15000,c1:3566,c2:2972,c3:2675,al:3864},{m:20000,c1:4367,c2:3639,c3:3275,al:4731},{m:25000,c1:5366,c2:4472,c3:4025,al:5814},{m:30000,c1:6360,c2:5300,c3:4770,al:6890}];
+  const rows=[
+    {m:500,  c1:216,  c2:180.25,c3:162,  al:234},
+    {m:1000, c1:433,  c2:360.5, c3:324,  al:469},
+    {m:2000, c1:865,  c2:721,   c3:649,  al:937},
+    {m:3000, c1:1260, c2:1050,  c3:945,  al:1365},
+    {m:4000, c1:1680, c2:1400,  c3:1260, al:1820},
+    {m:5000, c1:2100, c2:1750,  c3:1575, al:2275},
+    {m:6000, c1:2233, c2:1861,  c3:1675, al:2419},
+    {m:7000, c1:2366, c2:1972,  c3:1775, al:2564},
+    {m:8000, c1:2500, c2:2083,  c3:1875, al:2708},
+    {m:9000, c1:2633, c2:2194,  c3:1975, al:2852},
+    {m:10000,c1:2767, c2:2306,  c3:2075, al:2998},
+    {m:11000,c1:2927, c2:2439,  c3:2195, al:3171},
+    {m:12000,c1:3086, c2:2572,  c3:2315, al:3344},
+    {m:13000,c1:3247, c2:2706,  c3:2435, al:3518},
+    {m:14000,c1:3407, c2:2839,  c3:2555, al:3691},
+    {m:15000,c1:3566, c2:2972,  c3:2675, al:3864},
+    {m:16000,c1:3727, c2:3106,  c3:2795, al:4038},
+    {m:17000,c1:3887, c2:3239,  c3:2915, al:4211},
+    {m:18000,c1:4046, c2:3372,  c3:3035, al:4384},
+    {m:19000,c1:4207, c2:3506,  c3:3155, al:4558},
+    {m:20000,c1:4367, c2:3639,  c3:3275, al:4731},
+    {m:21000,c1:4567, c2:3806,  c3:3425, al:4948},
+    {m:22000,c1:4766, c2:3972,  c3:3575, al:5164},
+    {m:23000,c1:4967, c2:4139,  c3:3725, al:5381},
+    {m:24000,c1:5167, c2:4306,  c3:3875, al:5598},
+    {m:25000,c1:5366, c2:4472,  c3:4025, al:5814},
+    {m:26000,c1:5567, c2:4639,  c3:4175, al:6031},
+    {m:27000,c1:5767, c2:4806,  c3:4325, al:6248},
+    {m:28000,c1:5966, c2:4972,  c3:4475, al:6464},
+    {m:29000,c1:6167, c2:5139,  c3:4625, al:6681},
+    {m:30000,c1:6360, c2:5300,  c3:4770, al:6890},
+  ];
   const k={class1:'c1',class2:'c2',class3:'c3',alloy:'al'}[cls]||'c1';
   for(const r of rows) if(v<=r.m) return r[k];
+  // Over 30,000L → per additional 1,000L
   const base={class1:6360,class2:5300,class3:4770,alloy:6890}[cls]||6360;
   const inc={class1:200,class2:167,class3:150,alloy:217}[cls]||200;
   return base+inc*Math.ceil((v-30000)/1000);
@@ -1212,26 +1245,22 @@ const SECTIONS = [
     inputs:[{id:'qty',type:'number',label:'Cooling Surface (m²)',placeholder:'예: 50'}],
     calcFn:function(v){ const a=v.qty; if(a<=1)return 74; if(a<=2)return 105; if(a<=10)return 134; if(a<=50)return 158; if(a<=80)return 271; if(a<=100)return 325; return 325+4*(a-100); }
   },
-  { id:'12.6', name:'Unfired Pressure Vessels', multi:true,
+    { id:'12.6', name:'Unfired Pressure Vessels', multi:true,
     products:['Air Receiver','Air Reservoir','Pressure Vessel','Steam Drum','Expansion Tank','Air Bottle','UPV','Unfired Pressure Vessel'],
     unit:'Volume (Litres)',
-    note:'Shell made from Plate → 12.4(Shell HX) 요율 적용 / Shell made from Pipe → 12.3(Plate HX) 요율 적용 옵션 포함.',
+    note:'※ 각 제품 개별 Fee 합산. 배관 피팅 1개당 44.54 FU 추가. 중국산: Class I ×0.4, Class II ×0.46 적용.',
     multiFields:[
-      {id:'shellType',type:'select',label:'Shell 형태',w:'1.4fr',options:[{v:'standard',l:'Standard UPV'},{v:'plate',l:'Shell from Plate → 12.4 요율'},{v:'pipe',l:'Shell from Pipe → 12.3 요율'}]},
-      {id:'cls',type:'select',label:'Class',w:'1.1fr',options:[{v:'class1',l:'Class I'},{v:'class2',l:'Class II'},{v:'class3',l:'Class III'},{v:'alloy',l:'Alloy/Clad'}]},
-      {id:'vol',type:'number',label:'용적(L)',w:'0.9fr',placeholder:'예: 5000'},
+      {id:'cls',type:'select',label:'Class',w:'1.2fr',options:[{v:'class1',l:'Class I'},{v:'class2',l:'Class II'},{v:'class3',l:'Class III'},{v:'alloy',l:'Alloy/Clad'}]},
+      {id:'vol',type:'number',label:'용적(L)',w:'1fr',placeholder:'예: 5000'},
       {id:'fitting',type:'select',label:'배관 피팅',w:'0.9fr',options:[{v:'0',l:'없음'},{v:'1',l:'+1ea'},{v:'2',l:'+2ea'},{v:'3',l:'+3ea'},{v:'4',l:'+4ea'}]},
       {id:'qty',type:'number',label:'수량',w:'0.5fr',placeholder:'1'},
     ],
     multiCalcFn:function(v){
       const qty=parseInt(v.qty)||1, fittings=parseInt(v.fitting)||0;
-      let fu;
-      if(v.shellType==='plate') fu=shellTHXFU(parseFloat(v.vol)||0);
-      else if(v.shellType==='pipe') fu=plateTHXFU(parseFloat(v.vol)||0);
-      else fu=upvFU(parseFloat(v.vol)||0, v.cls||'class1');
+      const fu=upvFU(parseFloat(v.vol)||0, v.cls||'class1');
       return (fu+fittings*44.54)*qty;
     },
-    multiLabelFn:function(v){ const cl={class1:'Cl.I',class2:'Cl.II',class3:'Cl.III',alloy:'Alloy'}; const st={standard:'',plate:'[Plate]',pipe:'[Pipe]'}; return `${st[v.shellType]||''} ${cl[v.cls]||''} ${v.vol||0}L ×${v.qty||1}${parseInt(v.fitting)>0?' +피팅':''}`; }
+    multiLabelFn:function(v){ const cl={class1:'Cl.I',class2:'Cl.II',class3:'Cl.III',alloy:'Alloy'}; return `${cl[v.cls]||''} ${v.vol||0}L ×${v.qty||1}${parseInt(v.fitting)>0?' +피팅':''}`;  }
   },
   { id:'12.7', name:'Pipe Fittings & Flanges', multi:true,
     products:['Pipe Fitting','Flange','Elbow','Tee','Reducer','Heated Coil','Header','Soot Blower'],
