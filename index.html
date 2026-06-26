@@ -919,11 +919,11 @@ const SECTIONS = [
   { id:'9.8', name:'Steel Wire & Fibre Ropes', multi:true,
     products:['Steel Wire Rope','Fibre Rope','Wire Rope','Mooring Line','Towing Wire'],
     unit:'Project ID Quantity',
-    note:'※ Zone 요금은 5개 항목(Project ID)마다 1회 적용됩니다. 최대 5개까지 입력 가능.',
-    zonePerGroup: 5,
-    maxRows: 5,
+    note:'※ Zone 요금은 6개 항목(Project ID)마다 1회 적용됩니다. 최대 6개까지 입력 가능.',
+    zonePerGroup: 6,
+    maxRows: 6,
     multiFields:[
-      {id:'ropeType',type:'select',label:'유형',w:'2.5fr',options:[
+      {id:'ropeType',type:'select',label:'유형',w:'2fr',options:[
         {v:'single',l:'Single Lay Sling (88+0.012×MBL FU)'},
         {v:'imca',l:'Cable Lay Sling/Grommet (IMCA) – 293 FU'},
         {v:'en',l:'Cable Lay Sling (EN13414-3) – 135+0.019×SWL FU'},
@@ -932,12 +932,19 @@ const SECTIONS = [
         {v:'recert',l:'Re-certification/Visual – 53 FU'},
         {v:'length',l:'Length Measuring – 134 FU'},
       ]},
-      {id:'mbl',type:'number',label:'MBL(kN)/SWL(T)',w:'1fr',placeholder:'예: 500'},
+      {id:'mblUnit',type:'select',label:'단위',w:'0.7fr',options:[
+        {v:'kN',l:'kN'},
+        {v:'tf',l:'tonne-f'},
+      ]},
+      {id:'mbl',type:'number',label:'MBL/SWL',w:'0.8fr',placeholder:'예: 500'},
     ],
     multiCalcFn:function(v){
-      if(v.ropeType==='single') return 88+0.012*(parseFloat(v.mbl)||0);
+      const mblKN = v.mblUnit==='tf'
+        ? (parseFloat(v.mbl)||0)*9.80665
+        : (parseFloat(v.mbl)||0);
+      if(v.ropeType==='single') return 88+0.012*mblKN;
       if(v.ropeType==='imca') return 293;
-      if(v.ropeType==='en') return 135+0.019*(parseFloat(v.mbl)||0);
+      if(v.ropeType==='en') return 135+0.019*mblKN;
       if(v.ropeType==='assembly') return 225;
       if(v.ropeType==='destruct') return 294;
       if(v.ropeType==='recert') return 53;
@@ -946,10 +953,10 @@ const SECTIONS = [
     },
     multiLabelFn:function(v){
       const t={single:'Single Lay Sling',imca:'IMCA Grommet',en:'EN Cable Lay',assembly:'Wire Rope Assy',destruct:'Destruction Test',recert:'Re-certification',length:'Length Measuring'};
-      return `${t[v.ropeType]||v.ropeType}${['single','en'].includes(v.ropeType)&&v.mbl?' ('+v.mbl+'kN/T)':''}`;
+      const hasMbl = ['single','en'].includes(v.ropeType) && v.mbl;
+      return `${t[v.ropeType]||v.ropeType}${hasMbl?' ('+v.mbl+' '+v.mblUnit+')':''}`;
     },
     multiPostFn:function(lines){
-      // Zone 계산용 총 항목 수를 저장 (calcMulti에서 zoneAmt 조정에 사용)
       const totalFU = lines.reduce((s,r)=>s+r.fu, 0);
       return { totalFU, totalItems: lines.length };
     },
