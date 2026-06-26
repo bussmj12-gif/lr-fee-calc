@@ -530,20 +530,17 @@ const SECTIONS = [
   { id:'4.5', name:'Testing / Retesting / Validation of Materials',
     products:['Material Testing','Heat Number','Charge Number','Retesting','Transfer of Marks','Lab Attendance'],
     unit:'Heat Number', noSplit:true,
-    note:'※ Small cut-out: 총 중량 1톤 미만 AND Heat Number 5개 이하 → 550 FU(Min Fee) 적용. 어느 하나라도 초과하면 일반 요율(550 + (n-1)×150 FU) 적용.',
+    note:'※ 총 중량 1톤 미만 AND Heat Number 5개 이하 → Small cut-out: 550 FU 자동 적용. 그 외 → 일반 요율(550 + (n-1)×150 FU) 자동 적용.',
     inputs:[
-      {id:'testType',type:'select',label:'검사 유형',options:[
-        {val:'normal',label:'일반 Testing/Retesting (1st heat: 550 FU, 추가 heat: +150 FU)'},
-        {val:'small',label:'Small cut-out (중량 1톤 미만 + Heat ≤5개 → 550 FU 고정)'},
-      ]},
       {id:'qty',type:'number',label:'Heat Number 수량',placeholder:'예: 3'},
-      {id:'wt',type:'number',label:'총 중량 (ton)',placeholder:'예: 0.5 (Small cut-out: 1톤 미만)'},
+      {id:'wt',type:'number',label:'총 중량 (ton)',placeholder:'예: 0.5'},
       {id:'mat',type:'select',label:'재질 특약',options:[{val:'none',label:'Carbon Steel'},{val:'ss',label:'Stainless Steel (+20%)'},{val:'cu',label:'Copper Alloy (+20%)'},{val:'alloy',label:'Alloy Steel (+30%)'},{val:'al',label:'Aluminium (+40%)'},{val:'fg',label:'Forgings (+20%)'},{val:'cs',label:'Castings (+20%)'}]},
     ],
     calcFn:function(v){
       const n=Math.max(1,parseInt(v.qty)||1);
       const wt=parseFloat(v.wt)||0;
-      if(v.testType==='small' && wt<1.0 && n<=5) return 550;
+      // 중량 1톤 미만 AND Heat ≤5 → Small cut-out 550 FU
+      if(wt>0 && wt<1.0 && n<=5) return 550;
       return n===1?550:550+(n-1)*150;
     },
     calcModFn:function(v,fu){
@@ -1363,7 +1360,7 @@ function renderSingleCalc() {
   for(const inp of (s.inputs||[])) {
     html+=`<label for="inp_${inp.id}">${inp.label}</label>`;
     if(inp.type==='number') html+=`<input type="number" id="inp_${inp.id}" placeholder="${inp.placeholder||''}" min="0" step="any">`;
-    else html+=`<select id="inp_${inp.id}" ${s.id==='4.5'&&inp.id==='testType'?'onchange="update45Constraints()"':''}>${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
+    else html+=`<select id="inp_${inp.id}">${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
   }
   html+=zoneRemoteHTML();
   html+=`<div class="btn-group"><button class="btn btn-primary" onclick="calcSingle()" style="flex:2">계산하기</button><button class="btn btn-sec" onclick="showSearch()" style="flex:1">다시 검색</button></div></div>`;
@@ -1400,22 +1397,6 @@ function getSingleVals() {
   vals.zone = document.getElementById('inp_zone')?.value||'A';
   vals.remote = document.getElementById('inp_remote')?.value||'direct';
   return vals;
-}
-
-function update45Constraints() {
-  const testType = document.getElementById('inp_testType')?.value;
-  const qtyEl = document.getElementById('inp_qty');
-  const wtEl = document.getElementById('inp_wt');
-  if(!qtyEl) return;
-  if(testType==='small') {
-    qtyEl.max=5; qtyEl.placeholder='최대 5개 (Small cut-out)';
-    if(wtEl){ wtEl.max=0.999; wtEl.placeholder='1톤 미만 (예: 0.5)'; }
-    if(parseFloat(qtyEl.value)>5) qtyEl.value=5;
-    if(wtEl && parseFloat(wtEl.value)>=1) wtEl.value='';
-  } else {
-    qtyEl.removeAttribute('max'); qtyEl.placeholder='예: 3';
-    if(wtEl){ wtEl.removeAttribute('max'); wtEl.placeholder='예: 0.5'; }
-  }
 }
 
 function calcSingle() {
