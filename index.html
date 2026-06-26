@@ -916,35 +916,43 @@ const SECTIONS = [
     inputs:[{id:'qty',type:'number',label:'무게 (kg)',placeholder:'예: 20'}],
     calcFn:function(v){ const w=v.qty; if(w<=15)return 8; if(w<=30)return 18; if(w<=50)return 32; return 41; }
   },
-  { id:'9.8', name:'Steel Wire & Fibre Ropes',
+  { id:'9.8', name:'Steel Wire & Fibre Ropes', multi:true,
     products:['Steel Wire Rope','Fibre Rope','Wire Rope','Mooring Line','Towing Wire'],
     unit:'Project ID Quantity',
-    note:'※ Zone 요금은 5개 항목(Project ID)마다 1회 적용됩니다. 수량은 검사비에 영향 없음.',
-    zonePerGroup: 5,  // 5개당 Zone 1회
-    inputs:[
-      {id:'ropeType',type:'select',label:'유형',options:[
-        {val:'single',label:'Fibre/Wire rope Single Lay Sling (88+0.012×MBL FU)'},
-        {val:'imca',label:'Cable Lay Sling/Grommet (IMCA) – 293 FU'},
-        {val:'en',label:'Cable Lay Sling (EN13414-3) – 135+0.019×SWL FU'},
-        {val:'assembly',label:'Complete 2,3,4-Leg Wire Rope Assembly – 225 FU'},
-        {val:'destruct',label:'Destruction Test – 294 FU'},
-        {val:'recert',label:'Re-certification/Visual only – 53 FU'},
-        {val:'length',label:'Length Measuring – 134 FU'},
+    note:'※ Zone 요금은 5개 항목(Project ID)마다 1회 적용됩니다. 최대 5개까지 입력 가능.',
+    zonePerGroup: 5,
+    maxRows: 5,
+    multiFields:[
+      {id:'ropeType',type:'select',label:'유형',w:'2.5fr',options:[
+        {v:'single',l:'Single Lay Sling (88+0.012×MBL FU)'},
+        {v:'imca',l:'Cable Lay Sling/Grommet (IMCA) – 293 FU'},
+        {v:'en',l:'Cable Lay Sling (EN13414-3) – 135+0.019×SWL FU'},
+        {v:'assembly',l:'2,3,4-Leg Wire Rope Assembly – 225 FU'},
+        {v:'destruct',l:'Destruction Test – 294 FU'},
+        {v:'recert',l:'Re-certification/Visual – 53 FU'},
+        {v:'length',l:'Length Measuring – 134 FU'},
       ]},
-      {id:'mbl',type:'number',label:'MBL (kN) 또는 SWL (Ton) — 해당 유형만',placeholder:'예: 500'},
-      {id:'itemCount',type:'number',label:'항목 수 (Project ID 수)',placeholder:'예: 3'},
+      {id:'mbl',type:'number',label:'MBL(kN)/SWL(T)',w:'1fr',placeholder:'예: 500'},
     ],
-    calcFn:function(v){
-      let fu=0;
-      if(v.ropeType==='single') fu=88+0.012*(parseFloat(v.mbl)||0);
-      else if(v.ropeType==='imca') fu=293;
-      else if(v.ropeType==='en') fu=135+0.019*(parseFloat(v.mbl)||0);
-      else if(v.ropeType==='assembly') fu=225;
-      else if(v.ropeType==='destruct') fu=294;
-      else if(v.ropeType==='recert') fu=53;
-      else if(v.ropeType==='length') fu=134;
-      return fu;
-    }
+    multiCalcFn:function(v){
+      if(v.ropeType==='single') return 88+0.012*(parseFloat(v.mbl)||0);
+      if(v.ropeType==='imca') return 293;
+      if(v.ropeType==='en') return 135+0.019*(parseFloat(v.mbl)||0);
+      if(v.ropeType==='assembly') return 225;
+      if(v.ropeType==='destruct') return 294;
+      if(v.ropeType==='recert') return 53;
+      if(v.ropeType==='length') return 134;
+      return 0;
+    },
+    multiLabelFn:function(v){
+      const t={single:'Single Lay Sling',imca:'IMCA Grommet',en:'EN Cable Lay',assembly:'Wire Rope Assy',destruct:'Destruction Test',recert:'Re-certification',length:'Length Measuring'};
+      return `${t[v.ropeType]||v.ropeType}${['single','en'].includes(v.ropeType)&&v.mbl?' ('+v.mbl+'kN/T)':''}`;
+    },
+    multiPostFn:function(lines){
+      // Zone 계산용 총 항목 수를 저장 (calcMulti에서 zoneAmt 조정에 사용)
+      const totalFU = lines.reduce((s,r)=>s+r.fu, 0);
+      return { totalFU, totalItems: lines.length };
+    },
   },
   { id:'9.9', name:'Winches for Cargo Gear and Other Winches',
     products:['Winch','Cargo Winch','Mooring Winch','Boat Winch','Topping Lift Winch'],
@@ -1409,15 +1417,7 @@ function calcSingle() {
   const rawFee = modFU * FF;
   const isMin = !s.noMinFee && rawFee < MIN_FEE;
   const isNoSplit = s.noSplit === true;
-
-  // zonePerGroup: Zone 요금을 n개당 1회만 적용
-  let zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
-  if(s.zonePerGroup && zoneAmt > 0) {
-    const itemCount = Math.max(1, parseInt(v.itemCount)||1);
-    const groups = Math.ceil(itemCount / s.zonePerGroup);
-    zoneAmt = zoneAmt * groups;
-  }
-
+  const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
   showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit);
 }
 
@@ -1440,6 +1440,12 @@ function renderMultiCalc() {
 }
 
 function addMultiRow() {
+  const sec = currentSection;
+  const existing = document.querySelectorAll('#multiRows .multi-row').length;
+  if(sec.maxRows && existing >= sec.maxRows) {
+    alert(`최대 ${sec.maxRows}개까지만 추가할 수 있습니다.`);
+    return;
+  }
   const s = currentSection;
   const id = ++multiRowCnt;
   const cols = s.multiFields.map(f=>f.w||'1fr').join(' ') + ' 30px';
@@ -1479,11 +1485,12 @@ function calcMulti() {
   const zone = document.getElementById('inp_zone')?.value||'A';
   const isRemote = document.getElementById('inp_remote')?.value==='remote';
 
-  let totalFU;
+  let totalFU, totalItems = lines.length;
   if(s.multiPostFn) {
     const post = s.multiPostFn(lines);
     totalFU = post.totalFU;
-    if(post.disc<1) lines._discLabel = `총 ${post.totalUnits}대 → ${Math.round((1-post.disc)*100)}% 할인 적용`;
+    if(post.disc && post.disc<1) lines._discLabel = `총 ${post.totalUnits}대 → ${Math.round((1-post.disc)*100)}% 할인 적용`;
+    if(post.totalItems) totalItems = post.totalItems;
   } else {
     totalFU = lines.reduce((sum,r)=>sum+r.fu, 0);
   }
@@ -1491,7 +1498,14 @@ function calcMulti() {
   if(isRemote) totalFU *= 1.10;
   const rawFee = totalFU * FF;
   const isMin = rawFee < MIN_FEE;
-  const zoneAmt = isRemote||zone==='none'||zone==='F' ? 0 : ZONES[zone]||0;
+
+  let zoneAmt = isRemote||zone==='none'||zone==='F' ? 0 : ZONES[zone]||0;
+  if(s.zonePerGroup && zoneAmt > 0) {
+    const groups = Math.ceil(totalItems / s.zonePerGroup);
+    zoneAmt = zoneAmt * groups;
+    lines._zoneLabel = `Zone ${zone} × ${groups}회 (${totalItems}개 항목 ÷ ${s.zonePerGroup})`;
+  }
+
   const isNoSplitMulti = s.noSplit === true;
   showResult(s, lines, totalFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplitMulti);
 }
@@ -1541,7 +1555,7 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
         <div class="rrow"><span class="lbl">× Fee Factor KRW 1,225.8</span><span class="val">KRW ${Math.round(isRemote?rawFee/1.1:rawFee).toLocaleString()}</span></div>
         ${isRemote?`<div class="rrow"><span class="lbl">Remote +10%</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:''}
         ${isMin?`<div class="rrow warn"><span class="lbl">⚠ Min Fee 미달 → Min Fee 적용</span><span class="val">KRW ${MIN_FEE.toLocaleString()}</span></div>`:`<div class="rrow"><span class="lbl">Product Fee</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`}
-        ${zoneAmt>0?`<div class="rrow"><span class="lbl">Zonal Fee (Zone ${zone})${currentSection&&currentSection.zonePerGroup?' ['+Math.ceil((parseInt(getSingleVals&&getSingleVals()&&getSingleVals().itemCount)||1)/currentSection.zonePerGroup)+'회 적용]':''}</span><span class="val">KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
+        ${zoneAmt>0?`<div class="rrow"><span class="lbl">Zonal Fee${lines._zoneLabel?' ('+lines._zoneLabel+')':' (Zone '+zone+')'}</span><span class="val">KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
         <div class="rrow total"><span class="lbl">예상 청구액 (분할 전)</span><span class="val">KRW ${Math.round(previewTotal).toLocaleString()}</span></div>
       </div>
       ${isMin?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
