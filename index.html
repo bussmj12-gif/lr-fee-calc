@@ -543,10 +543,7 @@ const SECTIONS = [
     calcFn:function(v){
       const n=Math.max(1,parseInt(v.qty)||1);
       const wt=parseFloat(v.wt)||0;
-      if(v.testType==='small'){
-        if(wt < 1.0 && n <= 5) return 550;  // 550 FU 고정
-        // 조건 초과 → 일반 요율
-      }
+      if(v.testType==='small' && wt<1.0 && n<=5) return 550;
       return n===1?550:550+(n-1)*150;
     },
     calcModFn:function(v,fu){
@@ -615,16 +612,30 @@ const SECTIONS = [
     ],
     calcFn:function(v){ const sz=v.qty,len=v.len||1; let b=sz<=6?50:sz<=16?100:sz<=50?150:sz<=100?250:sz<=250?400:500; const mul={single:1,double:1.2,multi:1.4}[v.coreType]||1; return b*mul*len; }
   },
-  { id:'5.4', name:'Transformers, Converters & UPS',
+  { id:'5.4', name:'Transformers, Converters & UPS', multi:true,
     products:['Transformer','Frequency Converter','UPS','Uninterruptible Power Supply'],
     unit:'Power (kVA)',
-    inputs:[
-      {id:'qty',type:'number',label:'정격 출력 (kVA)',placeholder:'예: 1000'},
-      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1-2대'},{val:'34',label:'3-4대 (-10%)'},{val:'5',label:'5대 이상 (-20%)'}]},
+    note:'※ 각 kVA로 개별 FU 산출 후 합산. 총 대수 3-4대: -10%, 5대 이상: -20% 할인 적용.',
+    multiFields:[
+      {id:'kva',type:'number',label:'정격 출력 (kVA)',w:'2fr',placeholder:'예: 1000'},
+      {id:'units',type:'number',label:'대수',w:'1fr',placeholder:'1'},
     ],
-    note:'※ 여러 대인 경우 각각 개별 kVA로 FU를 산출한 후 합산합니다.',
-    calcFn:function(v){ const p=v.qty; const t=[{m:100,f:500},{m:150,f:700},{m:200,f:860},{m:300,f:1020},{m:400,f:1110},{m:500,f:1200},{m:1000,f:1500},{m:1500,f:1875},{m:2000,f:2250},{m:2500,f:2438},{m:3000,f:2625},{m:3500,f:2813},{m:4000,f:3000},{m:4500,f:3188},{m:5000,f:3375},{m:6000,f:3750},{m:7000,f:4125},{m:8000,f:4500},{m:9000,f:4875}]; for(const r of t) if(p<=r.m) return r.f; return 4875+75*Math.ceil((p-9000)/200); },
-    calcModFn:function(v,fu){ if(v.qty2==='34')return fu*0.90; if(v.qty2==='5')return fu*0.80; return fu; }
+    multiCalcFn:function(v){
+      const p=parseFloat(v.kva)||0;
+      const t=[{m:100,f:500},{m:150,f:700},{m:200,f:860},{m:300,f:1020},{m:400,f:1110},{m:500,f:1200},{m:1000,f:1500},{m:1500,f:1875},{m:2000,f:2250},{m:2500,f:2438},{m:3000,f:2625},{m:3500,f:2813},{m:4000,f:3000},{m:4500,f:3188},{m:5000,f:3375},{m:6000,f:3750},{m:7000,f:4125},{m:8000,f:4500},{m:9000,f:4875}];
+      let fuPerUnit=4875+75*Math.ceil((p-9000)/200);
+      for(const r of t) if(p<=r.m){fuPerUnit=r.f;break;}
+      return fuPerUnit*(parseInt(v.units)||1);
+    },
+    multiLabelFn:function(v){ return `${v.kva||0}kVA × ${v.units||1}대`; },
+    multiPostFn:function(lines){
+      const totalUnits=lines.reduce((s,r)=>s+(parseInt(r.v.units)||1),0);
+      let disc=1;
+      if(totalUnits>=5) disc=0.80;
+      else if(totalUnits>=3) disc=0.90;
+      const totalFU=lines.reduce((s,r)=>s+r.fu,0);
+      return { totalFU: totalFU*disc, disc, totalUnits };
+    },
   },
   { id:'5.5', name:'Bus Bar Trunking System',
     products:['Busbar','Bus Bar Trunking','Busduct'],
@@ -662,7 +673,7 @@ const SECTIONS = [
       {id:'simul',type:'select',label:'동시 검사 수량',options:[{val:'no',label:'1–3 systems'},{val:'yes',label:'4개 이상 동시 (-20%)'}]},
     ],
     calcFn:function(v){ return {ams:1000,rcs:1000,egcs:1000,console:600,pms:600}[v.sysType]||600; },
-    calcModFn:function(v,fu){ 
+    calcModFn:function(v,fu){
       const ar=v.sysType==='ams'||v.sysType==='rcs';
       let add=0;
       if(ar&&v.twin==='yes') add+=0.50;
@@ -792,7 +803,7 @@ const SECTIONS = [
     products:['Anchor','Cast Steel Anchor','Forged Anchor','Fabricated Anchor','Stockless Anchor'],
     unit:'Weight (kg)',
     inputs:[{id:'qty',type:'number',label:'총 무게 (kg)',placeholder:'예: 3000'}],
-    calcFn:function(v){ return v.qty<=20000?13.2*v.qty/100:1320+6.6*((v.qty-20000)/100); }
+    calcFn:function(v){ return v.qty<=20000?13.2*v.qty/100:1320+6.6*(v.qty/100); }
   },
   { id:'8.2', name:'Chain Cables & Fittings',
     products:['Chain Cable','Anchor Chain','Mooring Chain','Chafing Chain','Chain Fitting'],
@@ -1153,17 +1164,34 @@ const SECTIONS = [
     multiCalcFn:function(v){ return plateTHXFU(parseFloat(v.area)||0)*(parseInt(v.qty)||1); },
     multiLabelFn:function(v){ return `PHE ${v.area||0}m² ×${v.qty||1}`; }
   },
-  { id:'12.4', name:'Shell Type Heat Exchangers & Electrical Heaters', multi:true,
+  { id:'12.4', name:'Shell Type Heat Exchangers & Electrical Heaters',
     products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
     unit:'Cooling Surface (m²)',
-    note:'FN: 각 제품의 개별 Fee를 합산하여 최종 청구합니다.',
+    shellRouter: true,
+  },
+  { id:'12.4P', name:'Shell Type HX & Electrical Heaters — Shell from Plate (12.4 요율)', multi:true,
+    products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
+    unit:'Cooling Surface (m²)',
+    note:'※ Shell made from Plate → 12.4 요율(shellTHXFU) 적용. 각 제품 개별 Fee 합산.',
     multiFields:[
-      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.3fr',placeholder:'예: 100'},
-      {id:'htType',type:'select',label:'유형',w:'1.3fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
+      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.5fr',placeholder:'예: 100'},
+      {id:'htType',type:'select',label:'유형',w:'1.5fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
       {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
     ],
     multiCalcFn:function(v){ let fu=shellTHXFU(parseFloat(v.area)||0); if(v.htType==='elec')fu*=1.2; return fu*(parseInt(v.qty)||1); },
     multiLabelFn:function(v){ const t={hx:'Shell HX',elec:'Elec Heater'}; return `${t[v.htType]||''} ${v.area||0}m² ×${v.qty||1}`; }
+  },
+  { id:'12.4P2', name:'Shell Type HX & Electrical Heaters — Shell from Pipe (12.3 요율)', multi:true,
+    products:['Shell Tube Heat Exchanger','Shell Type Heat Exchanger','Cooler','Electrical Heater','SW Cooler','FW Cooler','LO Cooler','Heat Exchanger'],
+    unit:'Cooling Surface (m²)',
+    note:'※ Shell made from Pipe → 12.3 요율(plateTHXFU) 적용. 각 제품 개별 Fee 합산.',
+    multiFields:[
+      {id:'area',type:'number',label:'Cooling Surface(m²)',w:'1.5fr',placeholder:'예: 100'},
+      {id:'htType',type:'select',label:'유형',w:'1.5fr',options:[{v:'hx',l:'Shell Type HX'},{v:'elec',l:'Electrical Heater ×1.2'}]},
+      {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
+    ],
+    multiCalcFn:function(v){ let fu=plateTHXFU(parseFloat(v.area)||0); if(v.htType==='elec')fu*=1.2; return fu*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ const t={hx:'Shell HX [Pipe/12.3]',elec:'Elec Heater [Pipe/12.3]'}; return `${t[v.htType]||''} ${v.area||0}m² ×${v.qty||1}`; }
   },
   { id:'12.5', name:'Box Coolers',
     products:['Box Cooler','Keel Cooler'],
@@ -1264,11 +1292,12 @@ function doSearch(q) {
   const el = document.getElementById('searchResults');
   if(!q||q.trim().length<1){ el.innerHTML='<p class="empty-msg">검색어를 입력하세요.</p>'; return; }
   const nq = normalize(q);
-  const hits = SECTIONS.filter(s =>
-    s.id.toLowerCase().includes(nq) ||
-    normalize(s.name).includes(nq) ||
-    s.products.some(p=>normalize(p).includes(nq))
-  );
+  const hits = SECTIONS.filter(s => {
+    if(['12.4P','12.4P2'].includes(s.id)) return false;
+    return s.id.toLowerCase().includes(nq) ||
+      normalize(s.name).includes(nq) ||
+      s.products.some(p=>normalize(p).includes(nq));
+  });
   if(!hits.length){ el.innerHTML='<p class="empty-msg">검색 결과가 없습니다.</p>'; return; }
   el.innerHTML = hits.map(s=>`
     <div class="result-item" onclick="selectSection('${s.id}')">
@@ -1283,6 +1312,30 @@ function selectSection(id) {
   if(!currentSection) return;
   hide(['pageSearch','pageCalc','pageResult','pageVisit']);
   show('pageSection');
+
+  if(currentSection.shellRouter) {
+    document.getElementById('sectionDetail').innerHTML = `
+      <div class="card">
+        <div class="card-title">Section ${currentSection.id} · ${currentSection.name}</div>
+        <div class="card-sub">Shell Body 재질을 선택하세요.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+          <div onclick="selectSection('12.4P')" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;transition:border-color .15s,box-shadow .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(10,92,158,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+            <div style="font-size:28px;margin-bottom:8px">🔩</div>
+            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">Shell made from Plate</div>
+            <div style="font-size:12px;color:var(--primary);font-weight:600">12.4 요율 적용</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">shellTHXFU 기준</div>
+          </div>
+          <div onclick="selectSection('12.4P2')" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;transition:border-color .15s,box-shadow .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(10,92,158,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+            <div style="font-size:28px;margin-bottom:8px">🪣</div>
+            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">Shell made from Pipe</div>
+            <div style="font-size:12px;color:var(--primary);font-weight:600">12.3 요율 적용</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">plateTHXFU 기준</div>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
   document.getElementById('sectionDetail').innerHTML = `
     <div class="card">
       <div class="card-title">Section ${currentSection.id} · ${currentSection.name}${currentSection.multi?'<span class="badge badge-multi" style="margin-left:8px">다중 항목</span>':''}</div>
@@ -1355,20 +1408,17 @@ function update45Constraints() {
   const wtEl = document.getElementById('inp_wt');
   if(!qtyEl) return;
   if(testType==='small') {
-    qtyEl.max = 5;
-    qtyEl.placeholder = '최대 5개 (Small cut-out)';
-    if(wtEl) { wtEl.max = 0.999; wtEl.placeholder = '1톤 미만 (예: 0.5)'; }
-    // 초과값 자동 보정
+    qtyEl.max=5; qtyEl.placeholder='최대 5개 (Small cut-out)';
+    if(wtEl){ wtEl.max=0.999; wtEl.placeholder='1톤 미만 (예: 0.5)'; }
     if(parseFloat(qtyEl.value)>5) qtyEl.value=5;
     if(wtEl && parseFloat(wtEl.value)>=1) wtEl.value='';
   } else {
-    qtyEl.removeAttribute('max');
-    qtyEl.placeholder = '예: 3';
-    if(wtEl) { wtEl.removeAttribute('max'); wtEl.placeholder = '예: 0.5 (Small cut-out: 1톤 미만)'; }
+    qtyEl.removeAttribute('max'); qtyEl.placeholder='예: 3';
+    if(wtEl){ wtEl.removeAttribute('max'); wtEl.placeholder='예: 0.5'; }
   }
 }
 
-
+function calcSingle() {
   const s = currentSection, v = getSingleVals();
   let baseFU = s.calcFn ? s.calcFn(v) : 0;
   let modFU = s.calcModFn ? s.calcModFn(v, baseFU) : baseFU;
@@ -1438,7 +1488,16 @@ function calcMulti() {
   if(!lines.length){ alert('항목을 하나 이상 입력하세요.'); return; }
   const zone = document.getElementById('inp_zone')?.value||'A';
   const isRemote = document.getElementById('inp_remote')?.value==='remote';
-  let totalFU = lines.reduce((sum,r)=>sum+r.fu, 0);
+
+  let totalFU;
+  if(s.multiPostFn) {
+    const post = s.multiPostFn(lines);
+    totalFU = post.totalFU;
+    if(post.disc<1) lines._discLabel = `총 ${post.totalUnits}대 → ${Math.round((1-post.disc)*100)}% 할인 적용`;
+  } else {
+    totalFU = lines.reduce((sum,r)=>sum+r.fu, 0);
+  }
+
   if(isRemote) totalFU *= 1.10;
   const rawFee = totalFU * FF;
   const isMin = rawFee < MIN_FEE;
@@ -1462,6 +1521,7 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
   if(lines.length>0) {
     lineTable = `<table class="line-tbl"><thead><tr><th>항목</th><th style="text-align:right">FU</th><th style="text-align:right">금액</th></tr></thead><tbody>`;
     lineTable += lines.map(r=>`<tr><td>${r.lbl}</td><td style="text-align:right">${r.fu.toFixed(2)}</td><td style="text-align:right">KRW ${Math.round(r.fu*FF).toLocaleString()}</td></tr>`).join('');
+    if(lines._discLabel) lineTable += `<tr><td colspan="3" style="color:var(--success);font-weight:600;padding:5px 8px;">✓ ${lines._discLabel}</td></tr>`;
     lineTable += '</tbody></table>';
   }
 
