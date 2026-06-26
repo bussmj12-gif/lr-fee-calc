@@ -838,7 +838,7 @@ const SECTIONS = [
     products:['Welded Structure','Hull Structure','Hatch Coaming','Fin Stabiliser','Rudder Trunk','Nozzle','Tween Deck'],
     unit:'Weight (Ton)',
     inputs:[{id:'qty',type:'number',label:'무게 (Ton)',placeholder:'예: 20'}],
-    calcFn:function(v){ return v.qty<=10?27.5*(v.qty*1000/500):550+55*(v.qty-10); }
+    calcFn:function(v){ const w=v.qty; if(w<=10) return Math.ceil(w*1000/500)*27.5; return 550+55*(w-10); }
   },
   { id:'8.6', name:'Rope Ladder, Pilot (Rope) Ladder and Embarkation Ladder',
     products:['Rope Ladder','Pilot Ladder','Embarkation Ladder'],
