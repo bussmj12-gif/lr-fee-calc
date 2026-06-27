@@ -1405,8 +1405,10 @@ function renderSingleCalc() {
   for(const inp of (s.inputs||[])) {
     html+=`<label for="inp_${inp.id}">${inp.label}</label>`;
     if(inp.type==='number') html+=`<input type="number" id="inp_${inp.id}" placeholder="${inp.placeholder||''}" min="0" step="any">`;
-    else html+=`<select id="inp_${inp.id}">${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
+    else html+=`<select id="inp_${inp.id}" ${s.id==='5.7'&&inp.id==='sysType'?'onchange="update57Fields()"':''}>${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
   }
+  // 5.7 초기 상태 적용 (페이지 로드 시 첫 옵션 기준)
+  if(s.id==='5.7') html+=`<script>setTimeout(update57Fields,0)<\/script>`;
   html+=zoneRemoteHTML();
   html+=`<div class="btn-group"><button class="btn btn-primary" onclick="calcSingle()" style="flex:2">계산하기</button><button class="btn btn-sec" onclick="showSearch()" style="flex:1">다시 검색</button></div></div>`;
   document.getElementById('calcArea').innerHTML = html;
@@ -1442,6 +1444,22 @@ function getSingleVals() {
   vals.zone = document.getElementById('inp_zone')?.value||'A';
   vals.remote = document.getElementById('inp_remote')?.value||'direct';
   return vals;
+}
+
+function update57Fields() {
+  const sysType = document.getElementById('inp_sysType')?.value;
+  const isAR = sysType==='ams' || sysType==='rcs';
+  ['inp_twin','inp_gas'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.disabled = !isAR;
+    el.value = 'no';
+    el.style.opacity = isAR ? '1' : '0.4';
+    el.style.cursor = isAR ? '' : 'not-allowed';
+  });
+  // label 색상도 변경
+  const labels = document.querySelectorAll('label[for="inp_twin"], label[for="inp_gas"]');
+  labels.forEach(l => l.style.color = isAR ? '' : 'var(--text3)');
 }
 
 function calcSingle() {
