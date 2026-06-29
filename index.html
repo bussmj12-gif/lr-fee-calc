@@ -531,12 +531,23 @@ const SECTIONS = [
     ],
     multiCalcFn:function(v){
       const w=parseFloat(v.wt)||0;
+      // 제조사 현장 기준 Full FU
       let fu=w<=20000?12*w/100:1200+6*((w-20000)/100);
-      let m=1;
-      if(v.site==='mfr'){ if(v.cond==='rough')m*=0.90; if(v.cond==='ascast')m*=0.80; }
-      else { if(v.cond==='ascast')m*=0.30; if(v.cond==='rough')m*=0.20; }
-      m*=matMult(v.mat);
-      return fu*m;
+      fu*=matMult(v.mat);
+      if(v.site==='mfr'){
+        // 제조사 현장: FU 기준 할인
+        if(v.cond==='rough') fu*=0.90;
+        if(v.cond==='ascast') fu*=0.80;
+        return fu;
+      } else {
+        // 기계가공 현장: 전체 금액(KRW) 계산 후 비율 적용 → FU 역산
+        const fullFee=Math.max(fu*FF, MIN_FEE);
+        let ratio=1;
+        if(v.cond==='rough') ratio=0.20;
+        else if(v.cond==='ascast') ratio=0.30;
+        const fee=Math.max(fullFee*ratio, MIN_FEE);
+        return fee/FF;
+      }
     },
     multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',ascast:'As Cast'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'제조사':'기계가공'})`; }
   },
@@ -551,12 +562,23 @@ const SECTIONS = [
     ],
     multiCalcFn:function(v){
       const w=parseFloat(v.wt)||0;
+      // 제조사 현장 기준 Full FU
       let fu=w<=20000?16*w/100:1600+8*((w-20000)/100);
-      let m=1;
-      if(v.site==='mfr'){ if(v.cond==='rough')m*=0.90; if(v.cond==='asforged')m*=0.80; }
-      else { if(v.cond==='asforged')m*=0.30; if(v.cond==='rough')m*=0.20; }
-      m*=matMult(v.mat);
-      return fu*m;
+      fu*=matMult(v.mat);
+      if(v.site==='mfr'){
+        // 제조사 현장: FU 기준 할인
+        if(v.cond==='rough') fu*=0.90;
+        if(v.cond==='asforged') fu*=0.80;
+        return fu;
+      } else {
+        // 기계가공 현장: 전체 금액(KRW) 계산 후 비율 적용 → FU 역산
+        const fullFee=Math.max(fu*FF, MIN_FEE);
+        let ratio=1;
+        if(v.cond==='rough') ratio=0.20;
+        else if(v.cond==='asforged') ratio=0.30;
+        const fee=Math.max(fullFee*ratio, MIN_FEE);
+        return fee/FF;
+      }
     },
     multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',asforged:'As Forged'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'제조사':'기계가공'})`; }
   },
