@@ -854,8 +854,26 @@ const SECTIONS = [
   { id:'8.3', name:'Bow & Stern Thrusters',
     products:['Bow Thruster','Stern Thruster','DP Thruster','Tunnel Thruster'],
     unit:'Power (kW)',
-    inputs:[{id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 1500'}],
-    calcFn:function(v){ const p=v.qty; if(p<=500)return 1100; if(p<=1000)return 1700; if(p<=1500)return 2100; if(p<=2000)return 2400; if(p<=2500)return 2700; if(p<=3000)return 3000; if(p<=3500)return 3300; if(p<=4000)return 3600; return 3600+300*Math.ceil((p-4000)/500); }
+    note:'※ 최대 2대까지 입력 가능. 대수만큼 FU 합산.',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 1500'},
+      {id:'units',type:'number',label:'대수 (최대 2대)',placeholder:'예: 1'},
+    ],
+    calcFn:function(v){
+      const p=v.qty;
+      let fuPer;
+      if(p<=500)fuPer=1100;
+      else if(p<=1000)fuPer=1700;
+      else if(p<=1500)fuPer=2100;
+      else if(p<=2000)fuPer=2400;
+      else if(p<=2500)fuPer=2700;
+      else if(p<=3000)fuPer=3000;
+      else if(p<=3500)fuPer=3300;
+      else if(p<=4000)fuPer=3600;
+      else fuPer=3600+300*Math.ceil((p-4000)/500);
+      const n=Math.min(2,Math.max(1,parseInt(v.units)||1));
+      return fuPer*n;
+    },
   },
   { id:'8.4', name:'Accommodation Ladder & Associated Winch and Standard Gangway',
     products:['Accommodation Ladder','Gangway','Standard Gangway','Pilot Ladder Winch'],
