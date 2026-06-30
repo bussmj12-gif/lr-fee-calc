@@ -239,7 +239,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 // ═══════════════════════════════════════════════════════════════
 // PASSWORD GATE
 // ═══════════════════════════════════════════════════════════════
-const PASSWORDS = ['lr2024'];  // 비밀번호 목록 (관리자가 여기 수정)
+const PASSWORDS = ['LRBusan2026','LRBusan2026!'];  // 비밀번호 목록 (관리자가 여기 수정)
 
 function checkGate() {
   const input = document.getElementById('gateInput').value;
@@ -578,8 +578,8 @@ const SECTIONS = [
     ],
     multiCalcFn:function(v){
       const w=parseFloat(v.wt)||0;
-      // 제조사 현장 기준 Full FU
-      let fu=w<=20000?12*w/100:1200+6*((w-20000)/100);
+      // 제조사 현장 기준 Full FU (전체 중량 기준, "Per 100 Kg" - additional 문구 없음)
+      let fu=w<=20000?12*w/100:1200+6*(w/100);
       fu*=matMult(v.mat);
       if(v.site==='mfr'){
         // 제조사 현장: FU 기준 할인
@@ -609,8 +609,8 @@ const SECTIONS = [
     ],
     multiCalcFn:function(v){
       const w=parseFloat(v.wt)||0;
-      // 제조사 현장 기준 Full FU
-      let fu=w<=20000?16*w/100:1600+8*((w-20000)/100);
+      // 제조사 현장 기준 Full FU (전체 중량 기준, "Per 100 Kg" - additional 문구 없음)
+      let fu=w<=20000?16*w/100:1600+8*(w/100);
       fu*=matMult(v.mat);
       if(v.site==='mfr'){
         // 제조사 현장: FU 기준 할인
