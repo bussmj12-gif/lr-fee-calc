@@ -605,7 +605,7 @@ const SECTIONS = [
         let ratio=1;
         if(v.cond==='rough') ratio=0.20;
         else if(v.cond==='ascast') ratio=0.30;
-        const fee=Math.max(fullFee*ratio, MIN_FEE);
+        const fee=fullFee*ratio; // Min Fee는 calcMulti()에서 remote 가산 후 한 번만 적용
         return fee/FF;
       }
     },
@@ -636,7 +636,7 @@ const SECTIONS = [
         let ratio=1;
         if(v.cond==='rough') ratio=0.20;
         else if(v.cond==='asforged') ratio=0.30;
-        const fee=Math.max(fullFee*ratio, MIN_FEE);
+        const fee=fullFee*ratio; // Min Fee는 calcMulti()에서 remote 가산 후 한 번만 적용
         return fee/FF;
       }
     },
@@ -1004,21 +1004,33 @@ const SECTIONS = [
     calcFn:function(v){ const q=parseInt(v.qty)||1; const m={'100':330,'200':400,'200p':500,'clench':30}; return (m[v.diam]||330)*q; }
   },
   // ── Chapter 9 Lifting ────────────────────────────────────────
-  { id:'9.1', name:'Shipboard Crane – Gantry Cranes',
+  { id:'9.1', name:'Shipboard Crane – Gantry Cranes', multi:true,
     products:['Gantry Crane','Crane'],
     unit:'Lifting Capacity (Ton)',
-    inputs:[{id:'qty',type:'number',label:'SWL (Ton)',placeholder:'예: 30'}],
-    calcFn:function(v){ return v.qty<=20?3820:2120+85*v.qty; }
+    multiFields:[
+      {id:'swl',type:'number',label:'SWL (Ton)',w:'1.2fr',placeholder:'예: 30'},
+      {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
+    ],
+    multiCalcFn:function(v){ const swl=parseFloat(v.swl)||0; const fu=swl<=20?3820:2120+85*swl; return fu*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ return `SWL ${v.swl||0}Ton ×${v.qty||1}`; }
   },
-  { id:'9.2', name:'Shipboard Crane – Jib & Luffing Cranes',
+  { id:'9.2', name:'Shipboard Crane – Jib & Luffing Cranes', multi:true,
     products:['Jib Crane','Luffing Crane','Rescue Crane','Boat Crane','Crane Certification'],
     unit:'Lifting Capacity (Ton)',
-    inputs:[
-      {id:'qty',type:'number',label:'SWL (Ton)',placeholder:'예: 25'},
-      {id:'personnel',type:'select',label:'Personnel Handling 포함',options:[{val:'no',label:'없음'},{val:'yes',label:'포함 (+20%)'}]},
+    multiFields:[
+      {id:'swl',type:'number',label:'SWL (Ton)',w:'1fr',placeholder:'예: 25'},
+      {id:'personnel',type:'select',label:'Personnel Handling',w:'1.4fr',options:[{v:'no',l:'없음'},{v:'yes',l:'포함 (+20%)'}]},
+      {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
     ],
-    calcFn:function(v){ const t=[{m:2,f:600},{m:5,f:900},{m:10,f:1224},{m:15,f:1848},{m:20,f:2228},{m:25,f:2566},{m:30,f:2866},{m:35,f:3066},{m:40,f:3266},{m:50,f:3666}]; for(const r of t) if(v.qty<=r.m) return r.f; return 3666; },
-    calcModFn:function(v,fu){ return v.personnel==='yes'?fu*1.20:fu; }
+    multiCalcFn:function(v){
+      const swl=parseFloat(v.swl)||0;
+      const t=[{m:2,f:600},{m:5,f:900},{m:10,f:1224},{m:15,f:1848},{m:20,f:2228},{m:25,f:2566},{m:30,f:2866},{m:35,f:3066},{m:40,f:3266},{m:50,f:3666}];
+      let fu=3666;
+      for(const r of t) if(swl<=r.m){ fu=r.f; break; }
+      if(v.personnel==='yes') fu*=1.20;
+      return fu*(parseInt(v.qty)||1);
+    },
+    multiLabelFn:function(v){ return `SWL ${v.swl||0}Ton${v.personnel==='yes'?' [Personnel+20%]':''} ×${v.qty||1}`; }
   },
   { id:'9.3', name:'Spreader & Lifting Beams, Masts, Derrick Posts & Derricks (Welded)',
     products:['Spreader','Lifting Beam','Derrick','Mast','Derrick Post','Welded Derrick'],
@@ -1026,11 +1038,15 @@ const SECTIONS = [
     inputs:[{id:'qty',type:'number',label:'무게 (Ton)',placeholder:'예: 5'}],
     calcFn:function(v){ const w=v.qty; if(w<=2)return 150*w; if(w<=10)return 300+65*(w-2); if(w<=20)return 820+30*(w-10); return 1120+20*(w-20); }
   },
-  { id:'9.5', name:'Engine Room Overhead Cranes',
+  { id:'9.5', name:'Engine Room Overhead Cranes', multi:true,
     products:['Engine Room Crane','Overhead Crane','EOT Crane'],
     unit:'Lifting Capacity (Ton)',
-    inputs:[{id:'qty',type:'number',label:'SWL (Ton)',placeholder:'예: 10'}],
-    calcFn:function(v){ const t=v.qty; if(t<=5)return 600; if(t<=10)return 1210; return 1210+70*(t-10); }
+    multiFields:[
+      {id:'swl',type:'number',label:'SWL (Ton)',w:'1.2fr',placeholder:'예: 10'},
+      {id:'qty',type:'number',label:'수량',w:'0.6fr',placeholder:'1'},
+    ],
+    multiCalcFn:function(v){ const t=parseFloat(v.swl)||0; let fu; if(t<=5) fu=600; else if(t<=10) fu=1210; else fu=1210+70*(t-10); return fu*(parseInt(v.qty)||1); },
+    multiLabelFn:function(v){ return `SWL ${v.swl||0}Ton ×${v.qty||1}`; }
   },
   { id:'9.6', name:'Proof Load Test for Loose Gear',
     products:['Shackle','Hook','Block','Sheave','Tackles','Towing Equipment','Loose Gear'],
