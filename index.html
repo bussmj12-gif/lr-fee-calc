@@ -445,33 +445,51 @@ function renderVisit() {
     return;
   }
 
+  // Min Fee 그룹 소속 여부는 "Remote 10% 가산 전" 실제 검사비 기준으로 판단한다.
+  // (Remote 가산만으로 그룹 소속(n)이 바뀌면 다른 프로젝트의 분할 하한까지 흔들리기 때문)
+  visitProjects.forEach(p => {
+    const noRemoteFee = (p.rawProductFeeNoRemote != null ? p.rawProductFeeNoRemote : p.rawProductFee);
+    p.inMinFeeGroup = noRemoteFee < MIN_FEE;
+  });
+
   // Min Fee 미달 프로젝트 파악 후 §3.6 분할 재계산
-  const minFeeProjs = visitProjects.filter(p=>p.isMinFee && !p.noSplit);
+  const minFeeProjs = visitProjects.filter(p=>p.inMinFeeGroup && !p.noSplit);
   const n = minFeeProjs.length;
   const split = splitMinFee(n);  // §3.6 분할 후 최소 보장액
   const totalMult = Math.ceil(n/3);
 
   // 최종 각 프로젝트 청구액 계산
   // §3.6: Split Fee는 최소 보장액 — Actual Fee가 Split Fee보다 크면 Actual Fee 적용
+  // 단, Min Fee 그룹 내에서는 Remote 10% 가산으로 인해 (분할되지 않은) 전체 Min Fee를 넘지 않는 한
+  // Remote 10%를 추가로 부과하지 않는다.
   let grandTotal = 0;
   visitProjects.forEach(p => {
-    if(!p.isMinFee) {
-      // Min Fee 초과 프로젝트 → Actual Fee 그대로
+    const noRemoteFee = (p.rawProductFeeNoRemote != null ? p.rawProductFeeNoRemote : p.rawProductFee);
+    if(!p.inMinFeeGroup) {
+      // 실제 검사비(Remote 제외)가 이미 Min Fee를 초과 → Remote 포함 Actual Fee 그대로
       p.finalProductFee = p.rawProductFee;
       p.splitApplied = false;
+      p.remoteApplied = p.isRemote;
     } else if(p.noSplit) {
-      // Min Fee 미달이지만 §3.6 분할 제외 → Min Fee 전액
+      // Min Fee 미달이지만 §3.6 분할 제외 → Min Fee 전액 (Remote 가산 없음)
       p.finalProductFee = MIN_FEE;
       p.splitApplied = false;
+      p.remoteApplied = false;
+    } else if(p.rawProductFee >= MIN_FEE) {
+      // Remote 10%를 더해도 (분할 전) 전체 Min Fee를 넘는 경우 → 그 값 그대로 청구
+      p.finalProductFee = p.rawProductFee;
+      p.splitApplied = false;
+      p.remoteApplied = p.isRemote;
+    } else if(noRemoteFee > split) {
+      // Remote 가산 없이 실제 검사비가 분할 하한을 초과 → Remote 가산 없이 실제 검사비 청구
+      p.finalProductFee = noRemoteFee;
+      p.splitApplied = false;
+      p.remoteApplied = false;
     } else {
-      // Min Fee 미달 + 분할 대상 → Actual vs Split 중 큰 값
-      if(p.rawProductFee > split) {
-        p.finalProductFee = p.rawProductFee;
-        p.splitApplied = false;
-      } else {
-        p.finalProductFee = split;
-        p.splitApplied = true;
-      }
+      // 분할 하한 이하 → 분할 하한 청구
+      p.finalProductFee = split;
+      p.splitApplied = true;
+      p.remoteApplied = false;
     }
     p.finalTotal = p.finalProductFee + p.zoneAmt;
     grandTotal += p.finalTotal;
@@ -483,7 +501,7 @@ function renderVisit() {
     <div class="visit-summary">
       <div class="vs-title">이번 방문 총 청구 예정액</div>
       <div class="vs-total">KRW ${Math.round(grandTotal).toLocaleString()}</div>
-      <div class="vs-detail">프로젝트 ${visitProjects.length}개 · Min Fee 미달 ${n}개${n>1?' (§3.6 분할 적용)':''}</div>
+      <div class="vs-detail">프로젝트 ${visitProjects.length}개 · Min Fee 그룹 ${n}개${n>1?' (§3.6 분할 적용)':''}</div>
     </div>`;
 
   // Project cards
@@ -496,11 +514,12 @@ function renderVisit() {
       <div class="pc-detail">
         Product Fee: KRW ${Math.round(p.finalProductFee).toLocaleString()}
         ${p.zoneAmt>0?' · Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString():''}
-        ${p.isRemote?' · Remote +10%':''}
+        ${p.isRemote && p.remoteApplied?' · Remote +10%':''}
+        ${p.isRemote && !p.remoteApplied?' · Remote Survey (Min Fee 미달로 10% 미가산)':''}
       </div>
-      ${p.isMinFee && p.noSplit ? '<div class=\"pc-minfee\">⚠ Min Fee 적용 (§3.6 분할 제외)</div>' : ''}
-      ${p.isMinFee && !p.noSplit && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Min Fee 분할 적용 (원래 KRW '+Math.round(p.rawProductFee).toLocaleString()+')</div>' : ''}
-      ${p.isMinFee && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
+      ${p.inMinFeeGroup && p.noSplit ? '<div class=\"pc-minfee\">⚠ Min Fee 적용 (§3.6 분할 제외)</div>' : ''}
+      ${p.inMinFeeGroup && !p.noSplit && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Min Fee 분할 적용 (원래 KRW '+Math.round(p.rawProductFeeNoRemote!=null?p.rawProductFeeNoRemote:p.rawProductFee).toLocaleString()+')</div>' : ''}
+      ${p.inMinFeeGroup && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
       ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
       <div class="pc-actions">
         <button class="pc-edit" onclick="editProject(${i})">✎ 수정</button>
@@ -1705,7 +1724,8 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
   window._pendingProject = {
     secId: s.id,
     secName: s.name,
-    rawProductFee: Math.round(rawFee),  // 실제 계산된 Product Fee (Min Fee 적용 전)
+    rawProductFee: Math.round(rawFee),  // 실제 계산된 Product Fee (Min Fee 적용 전, Remote 포함)
+    rawProductFeeNoRemote: Math.round(isRemote ? rawFee/1.10 : rawFee),  // Remote 가산 전 금액 (Min Fee 분할 비교용)
     zoneAmt: zoneAmt,
     zone: zone,
     isRemote: isRemote,
