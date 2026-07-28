@@ -256,10 +256,12 @@ const PASSWORDS = ['0'];
 
 // ──────────────────────────────────────────────────────────────
 
+let _lrAuthed = false;
+
 function checkGate() {
   const input = document.getElementById('gateInput').value;
   if(PASSWORDS.includes(input)) {
-    sessionStorage.setItem('lr_auth','1');
+    _lrAuthed = true;
     document.getElementById('pageGate').style.display='none';
     document.getElementById('appContainer').style.display='';
   } else {
@@ -271,9 +273,9 @@ function checkGate() {
   }
 }
 
-// 세션 유지 (같은 브라우저 탭에서 새로고침 시 재입력 불필요)
+// 세션 유지 (같은 페이지 내에서만 유지됩니다 — 새로고침 시 재입력 필요)
 window.addEventListener('DOMContentLoaded', ()=>{
-  if(sessionStorage.getItem('lr_auth')==='1'){
+  if(_lrAuthed){
     document.getElementById('pageGate').style.display='none';
     document.getElementById('appContainer').style.display='';
   }
@@ -1771,4 +1773,9 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
 
 function addPendingToVisit() {
   if(window._pendingProject) {
-    addToVisit(window._pendi
+    addToVisit(window._pendingProject);
+  }
+}
+</script>
+</body>
+</html>
