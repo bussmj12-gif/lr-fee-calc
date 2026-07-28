@@ -515,7 +515,7 @@ function renderVisit() {
       </div>
       <div class="pc-detail">
         Product Fee: KRW ${Math.round(p.finalProductFee).toLocaleString()}
-        ${p.zoneAmt>0?' · Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString():''}
+        ${p.zoneAmt>0?' · <span style="color:var(--danger)">Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString()+'</span>':''}
         ${p.isRemote && p.remoteApplied?' · Remote +10%':''}
         ${p.isRemote && !p.remoteApplied?' · Remote Survey (Min Fee 미달로 10% 미가산)':''}
       </div>
@@ -1771,9 +1771,4 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
 
 function addPendingToVisit() {
   if(window._pendingProject) {
-    addToVisit(window._pendingProject);
-  }
-}
-</script>
-</body>
-</html>
+    addToVisit(window._pendi
