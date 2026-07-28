@@ -127,6 +127,8 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 .project-card .pc-del:hover { background: var(--danger-light); color: var(--danger); border-color: var(--danger); }
 .project-card .pc-edit { flex: 2; padding: 5px; font-size: 12px; border: 1px solid var(--primary); border-radius: var(--radius-sm); background: var(--primary-light); cursor: pointer; color: var(--primary); font-weight: 500; }
 .project-card .pc-edit:hover { background: var(--primary); color: #fff; }
+.project-card .pc-add { flex: 2; padding: 5px; font-size: 12px; border: 1px solid var(--success); border-radius: var(--radius-sm); background: #fff; cursor: pointer; color: var(--success); font-weight: 500; }
+.project-card .pc-add:hover { background: var(--success); color: #fff; }
 
 .back-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text2); background: none; border: none; cursor: pointer; margin-bottom: 14px; padding: 0; }
 .back-btn:hover { color: var(--text); }
@@ -522,6 +524,7 @@ function renderVisit() {
       ${p.inMinFeeGroup && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
       ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
       <div class="pc-actions">
+        <button class="pc-add" onclick="addSameSection(${i})">➕ 동일 항목 추가</button>
         <button class="pc-edit" onclick="editProject(${i})">✎ 수정</button>
         <button class="pc-del" onclick="removeProject(${i})">🗑 삭제</button>
       </div>
@@ -564,6 +567,15 @@ function editProject(i) {
         <button class="btn btn-primary" onclick="goToCalc()" style="width:100%;margin-top:14px">이 섹션으로 계산 →</button>
       </div>`;
   }
+}
+
+function addSameSection(i) {
+  // 기존 프로젝트는 그대로 두고, 같은 섹션의 계산 화면으로 바로 이동해 새 항목을 추가
+  const p = visitProjects[i];
+  const sec = SECTIONS.find(s => s.id === p.secId);
+  if(!sec) return;
+  currentSection = sec;
+  goToCalc();
 }
 
 function addToVisit(project) {
@@ -1300,7 +1312,7 @@ const SECTIONS = [
       {id:'qty',type:'number',label:'수량 (Below 2.5m²인 경우)',placeholder:'예: 2'},
     ],
     calcFn:function(v){ if(v.doorType==='small')return 300*(parseInt(v.qty)||1); const m={5:607,10:1368,30:2053,50:2851}; return m[v.doorType]||607; },
-    noMinFee_small:true
+    noSplitFn:function(v){ return v.doorType==='small'; }
   },
   { id:'11.6', name:'Watertight/Weathertight Small Hatches & Doors',
     products:['Watertight Door','Weathertight Door','Watertight Hatch','WT Door','WT Hatch','Pilot Door'],
@@ -1605,7 +1617,7 @@ function calcSingle() {
   if(isRemote) modFU *= 1.10;
   const rawFee = modFU * FF;
   const isMin = !s.noMinFee && rawFee < MIN_FEE;
-  const isNoSplit = s.noSplit === true;
+  const isNoSplit = s.noSplit === true || (typeof s.noSplitFn === 'function' && s.noSplitFn(v));
   const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
   showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit);
 }
@@ -1743,12 +1755,13 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
         <div class="rrow"><span class="lbl">총 Fee Units</span><span class="val">${baseFU.toFixed(2)} FU</span></div>
         ${modFU.toFixed(2)!==baseFU.toFixed(2)?`<div class="rrow"><span class="lbl">특약 적용 후 FU</span><span class="val">${modFU.toFixed(2)} FU</span></div>`:''}
         <div class="rrow"><span class="lbl">× Fee Factor KRW 1,225.7784</span><span class="val">KRW ${Math.round(isRemote?rawFee/1.1:rawFee).toLocaleString()}</span></div>
-        ${isRemote?`<div class="rrow"><span class="lbl">Remote +10%</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:''}
+        ${isRemote?`<div class="rrow"><span class="lbl" style="font-weight:700">Remote +10%</span><span class="val" style="font-weight:700">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:''}
         ${isMin?`<div class="rrow warn"><span class="lbl">⚠ Min Fee 미달 → Min Fee 적용</span><span class="val">KRW ${MIN_FEE.toLocaleString()}</span></div>`:`<div class="rrow"><span class="lbl">Product Fee</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`}
-        ${zoneAmt>0?`<div class="rrow"><span class="lbl">Zonal Fee${lines._zoneLabel?' ('+lines._zoneLabel+')':' (Zone '+zone+')'}</span><span class="val">KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
-        <div class="rrow total"><span class="lbl">예상 청구액 (분할 전)</span><span class="val">KRW ${Math.round(previewTotal).toLocaleString()}</span></div>
+        ${zoneAmt>0?`<div class="rrow"><span class="lbl"${isRemote?'':' style="color:var(--danger)"'}>Zonal Fee${lines._zoneLabel?' ('+lines._zoneLabel+')':' (Zone '+zone+')'}</span><span class="val"${isRemote?'':' style="color:var(--danger)"'}>KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
+        <div class="rrow total"><span class="lbl">${isMin&&!isNoSplit?'예상 청구액 (분할 전)':'예상 청구액'}</span><span class="val">KRW ${Math.round(previewTotal).toLocaleString()}</span></div>
       </div>
-      ${isMin?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
+      ${isMin&&!isNoSplit?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
+      ${isMin&&isNoSplit?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 이 섹션은 §3.6 분할 대상이 아니므로 Min Fee 전액이 그대로 청구됩니다.</div>`:''}
       <div class="btn-group">
         <button class="btn btn-primary" onclick="addPendingToVisit()" style="flex:2">방문 목록에 추가</button>
         <button class="btn btn-sec" onclick="showCalc()" style="flex:1">수치 수정</button>
