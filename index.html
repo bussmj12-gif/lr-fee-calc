@@ -264,6 +264,12 @@ function checkGate() {
     _lrAuthed = true;
     document.getElementById('pageGate').style.display='none';
     document.getElementById('appContainer').style.display='';
+    // 로그인 후 URL 파라미터 섹션으로 이동
+    const params = new URLSearchParams(window.location.search);
+    const secParam = params.get('section');
+    if(secParam && SECTIONS.find(s => s.id === secParam)) {
+      setTimeout(() => selectSection(secParam), 100);
+    }
   } else {
     const err = document.getElementById('gateError');
     err.textContent = '비밀번호가 올바르지 않습니다.';
@@ -278,6 +284,15 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(_lrAuthed){
     document.getElementById('pageGate').style.display='none';
     document.getElementById('appContainer').style.display='';
+    // URL 파라미터로 섹션 자동 이동 (?section=10.5)
+    const params = new URLSearchParams(window.location.search);
+    const secParam = params.get('section');
+    if(secParam) {
+      const sec = SECTIONS.find(s => s.id === secParam);
+      if(sec) {
+        setTimeout(() => selectSection(secParam), 100);
+      }
+    }
   }
 });
 
