@@ -1291,6 +1291,18 @@ const SECTIONS = [
     inputs:[{id:'qty',type:'number',label:'무게 (Ton)',placeholder:'예: 20'}],
     calcFn:function(v){ return v.qty<=10?550:550+55*(v.qty-10); }
   },
+  { id:'10.12', name:'Oil Filtering Equipment & Oil Separators',
+    products:['Oil Filter','Oil Separator','Purifier','Centrifuge','Oily Water Separator','OWS','Fuel Oil Purifier','LO Purifier'],
+    unit:'Diameter (m)',
+    note:'※ 1단계 내경(inner diameter from the first stage) 기준. 최대 5m. 초과 시 special consideration 필요.',
+    inputs:[{id:'qty',type:'number',label:'직경 (m)',placeholder:'예: 1.5'}],
+    calcFn:function(v){
+      const d=parseFloat(v.qty)||0;
+      const t=[{m:0.5,f:230},{m:1.0,f:255},{m:1.5,f:268},{m:2.0,f:295},{m:2.5,f:325},{m:3.0,f:357},{m:3.5,f:393},{m:4.0,f:433},{m:4.5,f:477},{m:5.0,f:525}];
+      for(const r of t) if(d<=r.m) return r.f;
+      return 525; // 5m 초과: special consideration → 최대값 적용
+    }
+  },
   { id:'10.13', name:'Machinery Units / Skid',
     products:['Machinery Skid','Hydraulic Power Unit','Pump Skid','Hi-Fog Unit','Machinery Unit'],
     unit:'Footfall (m²)',
