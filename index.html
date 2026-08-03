@@ -1509,19 +1509,22 @@ function normalize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9.\s]/g,'');
 function doSearch(q) {
   const el = document.getElementById('searchResults');
   if(!q||q.trim().length<1){ el.innerHTML='<p class="empty-msg">검색어를 입력하세요.</p>'; return; }
-  const nq = normalize(q);
+  // "Section 12.6" 형태 입력 시 "section " 제거
+  const cleaned = q.trim().replace(/^section\s*/i, '');
+  if(!cleaned){ el.innerHTML='<p class="empty-msg">섹션 번호를 입력하세요. 예: 12.6</p>'; return; }
+  const nq = normalize(cleaned);
   const hits = SECTIONS.filter(s => {
     if(['12.4P','12.4P2'].includes(s.id)) return false;
     return s.id.toLowerCase().includes(nq) ||
       normalize(s.name).includes(nq) ||
-      s.products.some(p=>normalize(p).includes(nq));
+      (s.products||[]).some(p=>normalize(p).includes(nq));
   });
   if(!hits.length){ el.innerHTML='<p class="empty-msg">검색 결과가 없습니다.</p>'; return; }
   el.innerHTML = hits.map(s=>`
     <div class="result-item" onclick="selectSection('${s.id}')">
       <div class="sec-id">Section ${s.id}${s.multi?'<span class="badge badge-multi">다중</span>':''}${s.special?'<span class="badge badge-special">특수</span>':''}</div>
       <div class="sec-name">${s.name}</div>
-      <div class="sec-tags">${s.products.slice(0,7).join(' · ')}</div>
+      <div class="sec-tags">${(s.products||[]).slice(0,7).join(' · ')}</div>
     </div>`).join('');
 }
 
