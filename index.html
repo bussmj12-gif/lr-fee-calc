@@ -1333,6 +1333,13 @@ const SECTIONS = [
     calcFn:function(v){ const a=v.qty; if(a<=40)return 825; if(a<=200)return 825+100*Math.ceil((a-40)/10); if(a<=1000)return 2425+60*Math.ceil((a-200)/10); return 7225+30*Math.ceil((a-1000)/10); },
     calcModFn:function(v,fu){ if(v.htType==='pontoon')return fu*0.70; if(v.htType==='single')return fu*0.80; return fu; }
   },
+  { id:'11.4', name:'Mooring Components for Single Point Mooring Systems & Emergency Towing Arrangement',
+    products:['Single Point Mooring','SPM','Stopper','Fairlead','Pedestal','Emergency Towing Arrangement','ETA','Mooring Component'],
+    unit:'Quantity (Sets)',
+    note:'※ Conventional oil tankers에 적용. 최대 1,000 sets. 초과 시 special consideration 필요.',
+    inputs:[{id:'qty',type:'number',label:'Set 수량',placeholder:'예: 2'}],
+    calcFn:function(v){ const n=Math.max(1,parseInt(v.qty)||1); return 600+120*(n-1); }
+  },
   { id:'11.5', name:'Shell Doors',
     products:['Shell Door','Bow Door','Stern Door','Side Door'],
     unit:'Quantity / Area',
