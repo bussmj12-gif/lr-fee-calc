@@ -143,26 +143,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 </style>
 </head>
 <body>
-<!-- PASSWORD GATE -->
-<div id="pageGate" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);">
-  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:32px 28px;width:100%;max-width:360px;box-shadow:var(--shadow);">
-    <div style="text-align:center;margin-bottom:24px;">
-      <div style="font-size:28px;font-weight:800;color:var(--primary);letter-spacing:-1px;">LR</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:4px;">MEC 검사비 계산기</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:2px;">South Korea · Internal Use Only</div>
-    </div>
-    <label style="font-size:12px;color:var(--text2);font-weight:500;">비밀번호</label>
-    <input type="password" id="gateInput" placeholder="비밀번호를 입력하세요"
-      style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--border2);border-radius:var(--radius-sm);margin:6px 0 4px;outline:none;"
-      onkeydown="if(event.key==='Enter')checkGate()"
-      onfocus="this.style.borderColor='var(--primary)'"
-      onblur="this.style.borderColor='var(--border2)'">
-    <div id="gateError" style="font-size:12px;color:var(--danger);min-height:18px;margin-bottom:8px;"></div>
-    <button onclick="checkGate()" style="width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;">입장하기</button>
-  </div>
-</div>
-
-<div class="container" id="appContainer" style="display:none">
+<div class="container" id="appContainer">
   <div class="app-header">
     <div>
       <div class="logo">LR MEC 검사비 계산기</div>
@@ -240,64 +221,6 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-// PASSWORD GATE
-// ═══════════════════════════════════════════════════════════════
-// ╔══════════════════════════════════════════════════════════════╗
-// ║              ⚙️  관리자 설정 / ADMIN CONFIG                  ║
-// ║                                                              ║
-// ║  비밀번호 변경 시 아래 PASSWORDS 배열만 수정하세요.           ║
-// ║  To change password, edit the PASSWORDS array below.        ║
-// ║                                                              ║
-// ║  예시 / Example:                                             ║
-// ║  ['lr2024']              → 비밀번호 1개                      ║
-// ║  ['lr2024', 'lr_hong']   → 비밀번호 여러 개 (모두 유효)      ║
-// ╚══════════════════════════════════════════════════════════════╝
-
-const PASSWORDS = ['0'];
-
-// ──────────────────────────────────────────────────────────────
-
-let _lrAuthed = false;
-
-function checkGate() {
-  const input = document.getElementById('gateInput').value;
-  if(PASSWORDS.includes(input)) {
-    _lrAuthed = true;
-    document.getElementById('pageGate').style.display='none';
-    document.getElementById('appContainer').style.display='';
-    // 로그인 후 URL 파라미터 섹션으로 이동
-    const params = new URLSearchParams(window.location.search);
-    const secParam = params.get('section');
-    if(secParam && SECTIONS.find(s => s.id === secParam)) {
-      setTimeout(() => selectSection(secParam), 100);
-    }
-  } else {
-    const err = document.getElementById('gateError');
-    err.textContent = '비밀번호가 올바르지 않습니다.';
-    document.getElementById('gateInput').value='';
-    document.getElementById('gateInput').focus();
-    setTimeout(()=>err.textContent='', 3000);
-  }
-}
-
-// 세션 유지 (같은 페이지 내에서만 유지됩니다 — 새로고침 시 재입력 필요)
-window.addEventListener('DOMContentLoaded', ()=>{
-  if(_lrAuthed){
-    document.getElementById('pageGate').style.display='none';
-    document.getElementById('appContainer').style.display='';
-    // URL 파라미터로 섹션 자동 이동 (?section=10.5)
-    const params = new URLSearchParams(window.location.search);
-    const secParam = params.get('section');
-    if(secParam) {
-      const sec = SECTIONS.find(s => s.id === secParam);
-      if(sec) {
-        setTimeout(() => selectSection(secParam), 100);
-      }
-    }
-  }
-});
-
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════
@@ -1616,7 +1539,7 @@ function zoneRemoteHTML() {
       <option value="none">Remote / Zone 미적용</option>
     </select></div>
     <div><label>Survey 유형</label>
-    <select id="inp_remote">
+    <select id="inp_remote" onchange="onRemoteChange(this)">
       <option value="direct">Direct Survey</option>
       <option value="remote">Remote Survey (+10% / Zone 없음)</option>
     </select></div>
@@ -1648,6 +1571,20 @@ function update57Fields() {
   // label 색상도 변경
   const labels = document.querySelectorAll('label[for="inp_twin"], label[for="inp_gas"]');
   labels.forEach(l => l.style.color = isAR ? '' : 'var(--text3)');
+}
+
+function onRemoteChange(sel) {
+  const zoneEl = document.getElementById('inp_zone');
+  if(!zoneEl) return;
+  if(sel.value === 'remote') {
+    zoneEl.value = 'none';
+    zoneEl.disabled = true;
+    zoneEl.style.opacity = '0.4';
+  } else {
+    zoneEl.disabled = false;
+    zoneEl.style.opacity = '1';
+    if(zoneEl.value === 'none') zoneEl.value = 'A';
+  }
 }
 
 function calcSingle() {
