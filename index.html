@@ -152,7 +152,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
   </div>
 
   <!-- VISIT HISTORY PAGE -->
-  <div id="pageVisit">
+  <div id="pageVisit" style="display:none">
     <div class="visit-header">
       <div class="visit-title">이번 방문 프로젝트</div>
       <button class="btn btn-primary" onclick="goSearch()" style="font-size:13px;padding:7px 14px;">+ 프로젝트 추가</button>
@@ -353,7 +353,12 @@ window.addEventListener('DOMContentLoaded', ()=>{
   const params = new URLSearchParams(window.location.search);
   const secParam = params.get('section');
   if(secParam && SECTIONS.find(s => s.id === secParam)) {
-    setTimeout(() => selectSection(secParam), 100);
+    // 섹션 파라미터 있으면 바로 섹션으로 이동 (초기화면 표시 안 함)
+    selectSection(secParam);
+  } else {
+    // 파라미터 없으면 초기화면 표시
+    show('pageVisit');
+    renderVisit();
   }
 });
 
