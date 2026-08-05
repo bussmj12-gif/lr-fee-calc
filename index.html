@@ -159,7 +159,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
   <div id="pageVisit" style="display:none">
     <div class="visit-header">
       <div class="visit-title">이번 방문 프로젝트</div>
-      <button class="btn btn-primary" onclick="goSearch()" style="font-size:13px;padding:7px 14px;">+ 프로젝트 추가</button>
+      <div id="visitBtns" style="display:flex;gap:8px;"></div>
     </div>
     <div id="visitSummary" style="display:none"></div>
     <div id="projectList"><p class="empty-msg">아직 추가된 프로젝트가 없습니다.<br>상단 버튼을 눌러 검사비를 계산하세요.</p></div>
@@ -399,12 +399,16 @@ function renderVisit() {
   const list = document.getElementById('projectList');
   const summary = document.getElementById('visitSummary');
   const noteEl = document.getElementById('visitMinFeeNote');
+  const btns = document.getElementById('visitBtns');
 
   if(!visitProjects.length) {
+    if(btns) btns.innerHTML = '<button class="btn btn-primary" onclick="goSearch()" style="font-size:13px;padding:7px 14px;">+ 신규품목 프로젝트</button>';
     list.innerHTML='<p class="empty-msg">아직 추가된 프로젝트가 없습니다.<br>상단 버튼을 눌러 검사비를 계산하세요.</p>';
     summary.style.display='none';
     noteEl.style.display='none';
     return;
+  } else {
+    if(btns) btns.innerHTML = '<button class="btn btn-sec" onclick="addSameSectionFromVisit()" style="font-size:13px;padding:7px 14px;border-color:var(--success);color:var(--success);">+ 동일품목 프로젝트</button><button class="btn btn-primary" onclick="goSearch()" style="font-size:13px;padding:7px 14px;margin-left:8px;">+ 신규품목 프로젝트</button>';
   }
 
   // Min Fee 그룹 소속 여부는 "Remote 10% 가산 전" 실제 검사비 기준으로 판단한다.
@@ -484,7 +488,6 @@ function renderVisit() {
       ${p.inMinFeeGroup && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
       ${p.linesSummary?`<div class="pc-detail" style="margin-top:3px">${p.linesSummary}</div>`:''}
       <div class="pc-actions">
-        <button class="pc-add" onclick="addSameSection(${i})">➕ 동일 항목 추가</button>
         <button class="pc-edit" onclick="editProject(${i})">✎ 수정</button>
         <button class="pc-del" onclick="removeProject(${i})">🗑 삭제</button>
       </div>
@@ -527,6 +530,15 @@ function editProject(i) {
         <button class="btn btn-primary" onclick="goToCalc()" style="width:100%;margin-top:14px">이 섹션으로 계산 →</button>
       </div>`;
   }
+}
+
+function addSameSectionFromVisit() {
+  if(!visitProjects.length) { goSearch(); return; }
+  const last = visitProjects[visitProjects.length - 1];
+  const sec = SECTIONS.find(s => s.id === last.secId);
+  if(!sec) { goSearch(); return; }
+  currentSection = sec;
+  goToCalc();
 }
 
 function addSameSection(i) {
