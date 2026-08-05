@@ -348,6 +348,15 @@ let visitProjects = [];
 let currentSection = null;
 let multiRowCnt = 0;
 
+// URL 파라미터로 섹션 자동 이동 (?section=10.5)
+window.addEventListener('DOMContentLoaded', ()=>{
+  const params = new URLSearchParams(window.location.search);
+  const secParam = params.get('section');
+  if(secParam && SECTIONS.find(s => s.id === secParam)) {
+    setTimeout(() => selectSection(secParam), 100);
+  }
+});
+
 function showVisit() {
   hide(['pageSearch','pageSection','pageCalc','pageResult']);
   show('pageVisit');
