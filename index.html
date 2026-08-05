@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDg1N0MiLz4KICA8dGV4dCB4PSIzMiIgeT0iMjQiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxBcmlhbCIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkxSPC90ZXh0PgogIDx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI3MDAiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5GRUU8L3RleHQ+Cjwvc3ZnPg==">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDg1N0MiLz4KICA8dGV4dCB4PSIzMiIgeT0iMjQiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxBcmlhbCIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkxSPC90ZXh0PgogIDx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI3MDAiIGZvbnQtc2l6ZT0iMTEiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5GRUU8L3RleHQ+Cjwvc3ZnPg==">
-<title>LR MEC 검사비 계산기 — Busan Port</title>
+<title>LR MEC 검사비 계산기</title>
 <style>
 :root {
   --bg: #f8f9fa;
@@ -149,7 +149,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
     <div style="text-align:center;margin-bottom:24px;">
       <div style="font-size:28px;font-weight:800;color:var(--primary);letter-spacing:-1px;">LR</div>
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:4px;">MEC 검사비 계산기</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:2px;">Busan Port · Internal Use Only</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px;">South Korea · Internal Use Only</div>
     </div>
     <label style="font-size:12px;color:var(--text2);font-weight:500;">비밀번호</label>
     <input type="password" id="gateInput" placeholder="비밀번호를 입력하세요"
@@ -166,7 +166,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
   <div class="app-header">
     <div>
       <div class="logo">LR MEC 검사비 계산기</div>
-      <div class="info">South Korea · Fee Factor KRW 1,225.7784 · Min Fee KRW 884,400 · Busan Port Internal Use</div>
+      <div class="info">South Korea · Fee Factor KRW 1,225.7784 · Min Fee KRW 884,400</div>
     </div>
   </div>
 
@@ -303,7 +303,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 // ═══════════════════════════════════════════════════════════════
 const FF = 1225.7784;
 const MIN_FEE = 884400;
-const ZONES = { A:202700, B:474627, C:746726, D:1018710, E:1290809, F:0, none:0 };
+const ZONES = { A:202644.75, B:474627.30, C:746726.40, D:1018710.00, E:1290809.10, F:0, none:0 };
 
 // ═══════════════════════════════════════════════════════════════
 // FEE CALCULATION HELPERS
@@ -1607,11 +1607,11 @@ function zoneRemoteHTML() {
   <div class="two-col">
     <div><label>Zone 선택</label>
     <select id="inp_zone">
-      <option value="A">Zone A – KRW 202,700</option>
-      <option value="B">Zone B – KRW 474,627</option>
-      <option value="C">Zone C – KRW 746,726</option>
-      <option value="D">Zone D – KRW 1,018,710</option>
-      <option value="E">Zone E – KRW 1,290,809</option>
+      <option value="A">Zone A – KRW 202,644.75</option>
+      <option value="B">Zone B – KRW 474,627.30</option>
+      <option value="C">Zone C – KRW 746,726.40</option>
+      <option value="D">Zone D – KRW 1,018,710.00</option>
+      <option value="E">Zone E – KRW 1,290,809.10</option>
       <option value="F">Zone F – As Incurred</option>
       <option value="none">Remote / Zone 미적용</option>
     </select></div>
