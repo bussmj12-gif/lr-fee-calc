@@ -41,6 +41,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .step { flex: 1; padding: 10px 6px; text-align: center; font-size: 12px; background: #fff; color: var(--text2); border-right: 1px solid var(--border); cursor: default; }
 .step:last-child { border-right: none; }
 .step.active { background: var(--primary); color: #fff; font-weight: 600; }
+.step.clickable { cursor: pointer; color: var(--primary); }
+.step.clickable:hover { background: var(--primary-light); color: var(--primary); font-weight: 600; }
 
 /* Cards */
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
@@ -189,7 +191,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
   <div id="pageSection" style="display:none">
     <button class="back-btn" onclick="showSearch()">← 검색으로</button>
     <div class="steps">
-      <div class="step">① 제품 검색</div>
+      <div class="step clickable" onclick="showSearch()">① 제품 검색</div>
       <div class="step active">② 섹션 선택</div>
       <div class="step">③ 수치 입력</div>
       <div class="step">④ 결과</div>
@@ -201,8 +203,8 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
   <div id="pageCalc" style="display:none">
     <button class="back-btn" onclick="showSection()">← 섹션으로</button>
     <div class="steps">
-      <div class="step">① 제품 검색</div>
-      <div class="step">② 섹션 선택</div>
+      <div class="step clickable" onclick="showSearch()">① 제품 검색</div>
+      <div class="step clickable" onclick="showSection()">② 섹션 선택</div>
       <div class="step active">③ 수치 입력</div>
       <div class="step">④ 결과</div>
     </div>
@@ -213,9 +215,9 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
   <div id="pageResult" style="display:none">
     <button class="back-btn" onclick="showCalc()">← 수치 수정</button>
     <div class="steps">
-      <div class="step">① 제품 검색</div>
-      <div class="step">② 섹션 선택</div>
-      <div class="step">③ 수치 입력</div>
+      <div class="step clickable" onclick="showSearch()">① 제품 검색</div>
+      <div class="step clickable" onclick="showSection()">② 섹션 선택</div>
+      <div class="step clickable" onclick="showCalc()">③ 수치 입력</div>
       <div class="step active">④ 결과</div>
     </div>
     <div id="resultArea"></div>
