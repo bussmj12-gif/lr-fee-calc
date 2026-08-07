@@ -142,6 +142,20 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 /* two-col grid */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 500px) { .two-col { grid-template-columns: 1fr; } }
+
+/* Print styles */
+@media print {
+  body { background: #fff; font-size: 12px; }
+  .app-header { border-radius: 0; margin-bottom: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #pageVisit, #pageSearch, #pageSection, #pageCalc,
+  .back-btn, .steps, .btn-group, .warn-box { display: none !important; }
+  .container { padding: 0; max-width: 100%; }
+  .card { box-shadow: none; border: none; padding: 8px 0; }
+  .result-card { border: 1px solid #ccc; }
+  .print-header { display: block !important; }
+  .no-print { display: none !important; }
+  @page { size: A4; margin: 15mm 15mm 15mm 15mm; }
+}
 </style>
 </head>
 <body>
@@ -1755,6 +1769,11 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
   };
 
   document.getElementById('resultArea').innerHTML = `
+    <div class="print-header" style="display:none;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--primary);">
+      <div style="font-size:13px;font-weight:700;color:var(--primary);">Lloyd's Register Asia</div>
+      <div style="font-size:11px;color:var(--text2);">Survey Fee Auto Calculation System</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px;">출력일: ${new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit'})}</div>
+    </div>
     <div class="card">
       <div class="card-title">계산 결과 · Section ${s.id}</div>
       <div class="card-sub">${s.name} · ${isRemote?'Remote Survey':'Direct Survey'}</div>
@@ -1768,11 +1787,15 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
         ${zoneAmt>0?`<div class="rrow"><span class="lbl"${isRemote?'':' style="color:var(--danger)"'}>Zonal Fee${lines._zoneLabel?' ('+lines._zoneLabel+')':' (Zone '+zone+')'}</span><span class="val"${isRemote?'':' style="color:var(--danger)"'}>KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
         <div class="rrow total"><span class="lbl">${isMin&&!isNoSplit?'예상 청구액 (분할 전)':'예상 청구액'}</span><span class="val">KRW ${Math.round(previewTotal).toLocaleString()}</span></div>
       </div>
-      ${isMin&&!isNoSplit?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
-      ${isMin&&isNoSplit?`<div class="warn-box" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 이 섹션은 §3.6 분할 대상이 아니므로 Min Fee 전액이 그대로 청구됩니다.</div>`:''}
-      <div class="btn-group">
+      <div style="font-size:11px;color:var(--text2);margin-top:10px;padding:8px;background:var(--bg);border-radius:4px;display:none;" class="print-header">
+        ※ 본 계산서는 참고용이며 실제 청구액과 다를 수 있습니다. · Lloyd's Register MEC Fee Scale 2026 v2.0 기준
+      </div>
+      ${isMin&&!isNoSplit?`<div class="warn-box no-print" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 방문 목록에 추가하면 §3.6 분할이 자동 적용됩니다.</div>`:''}
+      ${isMin&&isNoSplit?`<div class="warn-box no-print" style="margin-top:10px">⚠ Min Fee 미달 프로젝트입니다. 이 섹션은 §3.6 분할 대상이 아니므로 Min Fee 전액이 그대로 청구됩니다.</div>`:''}
+      <div class="btn-group no-print">
         <button class="btn btn-primary" onclick="addPendingToVisit()" style="flex:2">방문 목록에 추가</button>
         <button class="btn btn-sec" onclick="showCalc()" style="flex:1">수치 수정</button>
+        <button class="btn btn-sec" onclick="window.print()" style="flex:1;">🖨 프린트</button>
       </div>
     </div>`;
 }
