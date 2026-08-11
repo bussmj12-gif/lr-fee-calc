@@ -945,6 +945,17 @@ const SECTIONS = [
     calcFn:function(v){ return v.qty<=10?100*(v.qty*1000/500):2200+100*(v.qty-10); },
     calcModFn:function(v,fu){ return v.buildup==='yes'?fu*1.50:fu; }
   },
+  { id:'7.6', name:'Semi-built Crankshaft',
+    products:['Semi-built Crankshaft','Crankshaft','Semi Built Crankshaft'],
+    unit:'Power (kW)',
+    note:'※ Main Oil Engines Fee Table의 27.5% 적용. 최대 100,000 kW. 이미 LR 인증된 Cast/Forged 부품은 최종 금액에서 차감.',
+    inputs:[{id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 10000'}],
+    calcFn:function(v){
+      const p=v.qty;
+      if(p<50) return 200;
+      return mainEngFU(p)*0.275;
+    }
+  },
   { id:'7.7', name:'Turbochargers',
     products:['Turbocharger','Turbo Charger','TC','ABB Turbocharger','MHI Turbocharger'],
     unit:'Compressor Wheel Diameter (mm)',
