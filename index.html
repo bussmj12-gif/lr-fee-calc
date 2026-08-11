@@ -277,7 +277,9 @@ function mainEngFU(p) {
 function auxEngFU(p) { return p<=50?1200:mainEngFU(p); }
 function emergEngFU(p) {
   if(p<=50) return 1000;
-  if(p<=200) return 1000+Math.ceil((p-50)/50)*716.5;
+  // 50~200kW: 50kW 단위 올림, 기준 0kW부터 카운트
+  // 예: 180kW → ceil(180/50)=4 → 4×716.5=2866 FU
+  if(p<=200) return Math.ceil(p/50)*716.5;
   const a200=2866.02; if(p<=1000) return a200+Math.ceil((p-200)/100)*716.5;
   const a1k=8598.06; if(p<=3000) return a1k+Math.ceil((p-1000)/200)*716.5;
   const a3k=15763.11; if(p<=5000) return a3k+Math.ceil((p-3000)/250)*716.5;
