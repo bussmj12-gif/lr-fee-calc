@@ -936,13 +936,17 @@ const SECTIONS = [
     ],
     calcFn:function(v){
       const d=v.qty;
-      let fu=0;
-      if(d<=150)fu=250; else if(d<=300)fu=460; else if(d<=450)fu=670;
-      else if(d<=600)fu=880; else if(d<=750)fu=1090; else if(d<=900)fu=1300; else fu=1510;
-      // 수동 FF가 입력된 경우: 해당 FF로 금액 계산 후 표준 FF로 역산하여 FU 반환
+      if(d<=150)return 250; if(d<=300)return 460; if(d<=450)return 670;
+      if(d<=600)return 880; if(d<=750)return 1090; if(d<=900)return 1300; return 1510;
+    },
+    calcModFn:function(v,fu){
       const cFF=parseFloat(v.customFF)||0;
-      if(cFF>0) return fu*cFF/FF;
+      if(cFF>0) return fu*cFF/FF;  // 업체 FF로 금액 계산 후 표준 FF로 역산
       return fu;
+    },
+    customFFLabel:function(v){
+      const cFF=parseFloat(v.customFF)||0;
+      return cFF>0 ? `× 업체 할인 Fee Factor KRW ${cFF.toLocaleString()}` : null;
     }
   },
   { id:'7.8', name:'Auxiliary Engine Generator Sets',
@@ -1735,7 +1739,8 @@ function calcSingle() {
   const isMin = !s.noMinFee && rawFee < MIN_FEE;
   const isNoSplit = s.noSplit === true || (typeof s.noSplitFn === 'function' && s.noSplitFn(v));
   const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
-  showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit);
+  const customFFLabel = s.customFFLabel ? s.customFFLabel(v) : null;
+  showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit, customFFLabel);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1830,7 +1835,7 @@ function calcMulti() {
 // ═══════════════════════════════════════════════════════════════
 // RESULT
 // ═══════════════════════════════════════════════════════════════
-function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplit) {
+function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplit, customFFLabel) {
   isNoSplit = isNoSplit || false;
   hide(['pageCalc','pageSection','pageSearch','pageVisit']);
   show('pageResult');
@@ -1875,7 +1880,7 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
       <div class="result-card">
         <div class="rrow"><span class="lbl">총 Fee Units</span><span class="val">${baseFU.toFixed(2)} FU</span></div>
         ${modFU.toFixed(2)!==baseFU.toFixed(2)?`<div class="rrow"><span class="lbl">특약 적용 후 FU</span><span class="val">${modFU.toFixed(2)} FU</span></div>`:''}
-        <div class="rrow"><span class="lbl">× Fee Factor KRW 1,225.7784</span><span class="val">KRW ${Math.round(isRemote?rawFee/1.1:rawFee).toLocaleString()}</span></div>
+        <div class="rrow"><span class="lbl">${customFFLabel||'× Fee Factor KRW 1,225.7784'}</span><span class="val">KRW ${Math.round(isRemote?rawFee/1.1:rawFee).toLocaleString()}</span></div>
         ${isRemote?`<div class="rrow"><span class="lbl" style="font-weight:700">Remote +10%</span><span class="val" style="font-weight:700">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:''}
         ${isMin?`<div class="rrow warn"><span class="lbl">⚠ Min Fee 미달 → Min Fee 적용</span><span class="val">KRW ${MIN_FEE.toLocaleString()}</span></div>`:`<div class="rrow"><span class="lbl">Product Fee</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`}
         ${zoneAmt>0?`<div class="rrow"><span class="lbl"${isRemote?'':' style="color:var(--danger)"'}>Zonal Fee${lines._zoneLabel?' ('+lines._zoneLabel+')':' (Zone '+zone+')'}</span><span class="val"${isRemote?'':' style="color:var(--danger)"'}>KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
