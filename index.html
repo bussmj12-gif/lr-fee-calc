@@ -927,6 +927,18 @@ const SECTIONS = [
     calcFn:function(v){ const p=v.qty; const t=[{m:100,f:600},{m:125,f:720},{m:150,f:765},{m:175,f:810},{m:200,f:855},{m:250,f:900},{m:325,f:945},{m:400,f:990},{m:475,f:1035},{m:550,f:1080},{m:625,f:1125},{m:700,f:1170},{m:775,f:1215},{m:850,f:1260},{m:925,f:1305},{m:1000,f:1350},{m:1100,f:1418},{m:1200,f:1485},{m:1300,f:1553},{m:1400,f:1620},{m:1500,f:1688},{m:1600,f:1755},{m:1700,f:1823},{m:1800,f:1890},{m:1900,f:1958},{m:2000,f:2025},{m:2400,f:2160},{m:2800,f:2295},{m:3200,f:2430},{m:3600,f:2565},{m:4000,f:2700},{m:4400,f:2835},{m:4800,f:2970},{m:5200,f:3105},{m:5600,f:3240},{m:6000,f:3375},{m:6400,f:3510},{m:6800,f:3645},{m:7200,f:3780},{m:8000,f:4050},{m:9000,f:4388},{m:10000,f:4725},{m:10200,f:4793}]; for(const r of t) if(p<=r.m) return r.f; return 4793+68*Math.ceil((p-10200)/200); },
     calcModFn:function(v,fu){ return v.hv==='hv'?fu*1.20:fu; }
   },
+  { id:'7.9', name:'Bedplates, Framebox & Column',
+    products:['Bedplate','Framebox','Column','Engine Bedplate','Frame Box'],
+    unit:'Power (kW)',
+    note:'※ 최대 500,000 kW. 초과 시 special consideration 필요.',
+    inputs:[{id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 10000'}],
+    calcFn:function(v){
+      const p=v.qty;
+      const t=[{m:10000,f:1800},{m:20000,f:2000},{m:30000,f:2200},{m:40000,f:2400},{m:50000,f:2700},{m:60000,f:2800},{m:70000,f:2900},{m:80000,f:3000},{m:90000,f:3100},{m:100000,f:3200},{m:200000,f:3300},{m:300000,f:3400},{m:400000,f:3500},{m:500000,f:3600}];
+      for(const r of t) if(p<=r.m) return r.f;
+      return 3600;
+    }
+  },
   // ── Chapter 8 Hull ───────────────────────────────────────────
   { id:'8.1', name:'Anchors',
     products:['Anchor','Cast Steel Anchor','Forged Anchor','Fabricated Anchor','Stockless Anchor'],
