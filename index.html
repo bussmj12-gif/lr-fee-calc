@@ -838,6 +838,15 @@ const SECTIONS = [
   { id:'6.1', name:'Main Oil Engines',
     products:['Main Engine','Two-stroke Engine','MAN Engine','WinGD','HFO Engine','Main Diesel'],
     unit:'Power (kW)',
+    shellRouter: true,
+    routerOptions: [
+      { secId:'6.1T', icon:'📊', title:'Standard Tariff', sub1:'Fee Factor KRW 1,225.7784 적용', sub2:'정격 출력(kW) 기준' },
+      { secId:'6.1M', icon:'✏️', title:'업체 할인 Fee Factor', sub1:'업체별 할인 FF 직접 입력', sub2:'FU는 Tariff 기준 자동 계산' },
+    ]
+  },
+  { id:'6.1T', name:'Main Oil Engines — Standard Tariff', hidden:true,
+    products:['Main Engine','Two-stroke Engine','MAN Engine','WinGD','HFO Engine','Main Diesel'],
+    unit:'Power (kW)',
     inputs:[
       {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 10000'},
       {id:'dualfuel',type:'select',label:'Dual Fuel',options:[{val:'no',label:'일반'},{val:'yes',label:'Dual Fuel (+20%)'}]},
@@ -845,6 +854,31 @@ const SECTIONS = [
     ],
     calcFn:function(v){ return mainEngFU(v.qty); },
     calcModFn:function(v,fu){ let m=1; if(v.dualfuel==='yes')m*=1.20; if(v.recon==='yes')m*=0.80; return fu*m; }
+  },
+  { id:'6.1M', name:'Main Oil Engines — 업체 할인 Fee Factor 적용', hidden:true,
+    products:['Main Engine','Two-stroke Engine','MAN Engine','WinGD','HFO Engine','Main Diesel'],
+    unit:'Power (kW)',
+    note:'※ FU는 Tariff 기준으로 자동 계산됩니다. 업체별 할인 Fee Factor를 입력하면 최종 금액이 계산됩니다.',
+    inputs:[
+      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 10000'},
+      {id:'dualfuel',type:'select',label:'Dual Fuel',options:[{val:'no',label:'일반'},{val:'yes',label:'Dual Fuel (+20%)'}]},
+      {id:'recon',type:'select',label:'Reconditioned',options:[{val:'no',label:'신품'},{val:'yes',label:'Reconditioned (-20%)'}]},
+      {id:'customFF',type:'number',label:'업체 할인 Fee Factor (KRW)',placeholder:'예: 1134.36'},
+    ],
+    calcFn:function(v){ return mainEngFU(v.qty); },
+    calcModFn:function(v,fu){
+      let m=1;
+      if(v.dualfuel==='yes')m*=1.20;
+      if(v.recon==='yes')m*=0.80;
+      fu=fu*m;
+      const cFF=parseFloat(v.customFF)||0;
+      if(cFF>0) return fu*cFF/FF;
+      return fu;
+    },
+    customFFLabel:function(v){
+      const cFF=parseFloat(v.customFF)||0;
+      return cFF>0 ? `× 업체 할인 Fee Factor KRW ${cFF.toLocaleString()}` : null;
+    }
   },
   { id:'6.2', name:'Auxiliary Oil Engines',
     products:['Auxiliary Engine','Generator Engine','Aux Engine','Diesel Generator','D/G'],
