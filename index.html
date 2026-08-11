@@ -914,8 +914,34 @@ const SECTIONS = [
   { id:'7.7', name:'Turbochargers',
     products:['Turbocharger','Turbo Charger','TC','ABB Turbocharger','MHI Turbocharger'],
     unit:'Compressor Wheel Diameter (mm)',
+    shellRouter: true,
+    routerOptions: [
+      { secId:'7.7T', icon:'📊', title:'Tariff 기준', sub1:'12.4 요율 적용', sub2:'Compressor Wheel 외경(mm) 기준' },
+      { secId:'7.7M', icon:'✏️', title:'수동 입력', sub1:'Fee 직접 입력', sub2:'업체 특약 / 별도 합의 금액' },
+    ]
+  },
+  { id:'7.7T', name:'Turbochargers — Tariff 기준', hidden:true,
+    products:['Turbocharger','Turbo Charger','TC','ABB Turbocharger','MHI Turbocharger'],
+    unit:'Compressor Wheel Diameter (mm)',
     inputs:[{id:'qty',type:'number',label:'Compressor Wheel 외경 (mm)',placeholder:'예: 400'}],
     calcFn:function(v){ const d=v.qty; if(d<=150)return 250; if(d<=300)return 460; if(d<=450)return 670; if(d<=600)return 880; if(d<=750)return 1090; if(d<=900)return 1300; return 1510; }
+  },
+  { id:'7.7M', name:'Turbochargers — 수동 입력', hidden:true,
+    products:['Turbocharger','Turbo Charger','TC','ABB Turbocharger','MHI Turbocharger'],
+    unit:'Fee Units 또는 금액',
+    note:'※ Fee Units(FU) 또는 KRW 금액 중 하나를 입력하세요. FU 입력 시 Fee Factor가 자동 적용됩니다.',
+    inputs:[
+      {id:'inputType',type:'select',label:'입력 방식',options:[
+        {val:'fu',label:'Fee Units (FU) 입력 → KRW 자동 계산'},
+        {val:'krw',label:'KRW 금액 직접 입력'},
+      ]},
+      {id:'fuVal',type:'number',label:'Fee Units (FU)',placeholder:'예: 880'},
+      {id:'krwVal',type:'number',label:'금액 (KRW)',placeholder:'예: 1078000'},
+    ],
+    calcFn:function(v){
+      if(v.inputType==='krw') return (parseFloat(v.krwVal)||0)/FF;
+      return parseFloat(v.fuVal)||0;
+    }
   },
   { id:'7.8', name:'Auxiliary Engine Generator Sets',
     products:['Generator Set','Genset','Engine-Generator Set','D/G Set','Diesel Generator Set'],
@@ -1527,6 +1553,7 @@ function doSearch(q) {
   const nq = normalize(cleaned);
   const hits = SECTIONS.filter(s => {
     if(['12.4P','12.4P2'].includes(s.id)) return false;
+    if(s.hidden) return false;
     return s.id.toLowerCase().includes(nq) ||
       normalize(s.name).includes(nq) ||
       (s.products||[]).some(p=>normalize(p).includes(nq));
@@ -1546,24 +1573,24 @@ function selectSection(id) {
   hide(['pageSearch','pageCalc','pageResult','pageVisit']);
   show('pageSection');
 
+  // Shell Router 또는 routerOptions 분기
   if(currentSection.shellRouter) {
+    const opts = currentSection.routerOptions || [
+      { secId:'12.4P', icon:'🔩', title:'Shell made from Plate', sub1:'12.4 요율 적용', sub2:'shellTHXFU 기준' },
+      { secId:'12.4P2', icon:'🪣', title:'Shell made from Pipe', sub1:'12.3 요율 적용', sub2:'plateTHXFU 기준' },
+    ];
     document.getElementById('sectionDetail').innerHTML = `
       <div class="card">
         <div class="card-title">Section ${currentSection.id} · ${currentSection.name}</div>
-        <div class="card-sub">Shell Body 재질을 선택하세요.</div>
+        <div class="card-sub">${currentSection.routerOptions ? '계산 방식을 선택하세요.' : 'Shell Body 재질을 선택하세요.'}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
-          <div onclick="selectSection('12.4P')" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;transition:border-color .15s,box-shadow .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(10,92,158,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <div style="font-size:28px;margin-bottom:8px">🔩</div>
-            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">Shell made from Plate</div>
-            <div style="font-size:12px;color:var(--primary);font-weight:600">12.4 요율 적용</div>
-            <div style="font-size:11px;color:var(--text2);margin-top:4px">shellTHXFU 기준</div>
-          </div>
-          <div onclick="selectSection('12.4P2')" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;transition:border-color .15s,box-shadow .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(10,92,158,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <div style="font-size:28px;margin-bottom:8px">🪣</div>
-            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">Shell made from Pipe</div>
-            <div style="font-size:12px;color:var(--primary);font-weight:600">12.3 요율 적용</div>
-            <div style="font-size:11px;color:var(--text2);margin-top:4px">plateTHXFU 기준</div>
-          </div>
+          ${opts.map(o=>`
+          <div onclick="selectSection('${o.secId}')" style="cursor:pointer;border:2px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;transition:border-color .15s,box-shadow .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(10,92,158,.1)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+            <div style="font-size:28px;margin-bottom:8px">${o.icon}</div>
+            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">${o.title}</div>
+            <div style="font-size:12px;color:var(--primary);font-weight:600">${o.sub1}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">${o.sub2}</div>
+          </div>`).join('')}
         </div>
       </div>`;
     return;
@@ -1598,7 +1625,7 @@ function renderSingleCalc() {
     if(inp.type==='number') {
       const wrapId = s.id==='12.1' ? `id="wrap_${inp.id}"` : '';
       html+=`<div ${wrapId}><input type="number" id="inp_${inp.id}" placeholder="${inp.placeholder||''}" min="0" step="any"></div>`;
-    } else html+=`<select id="inp_${inp.id}" ${s.id==='5.7'&&inp.id==='sysType'?'onchange="update57Fields()"':''} ${s.id==='12.1'&&inp.id==='boilerType'?'onchange="update121Fields()"':''}>${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
+    } else html+=`<select id="inp_${inp.id}" ${s.id==='5.7'&&inp.id==='sysType'?'onchange="update57Fields()"':''} ${s.id==='12.1'&&inp.id==='boilerType'?'onchange="update121Fields()"':''} ${s.id==='7.7M'&&inp.id==='inputType'?'onchange="update77MFields()"':''}>${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
   }
   // 5.7 초기 상태 적용 (페이지 로드 시 첫 옵션 기준)
   if(s.id==='5.7') html+=`<script>setTimeout(update57Fields,0)<\/script>`;
@@ -1607,6 +1634,7 @@ function renderSingleCalc() {
   document.getElementById('calcArea').innerHTML = html;
   if(s.id==='12.1') update121Fields();
   if(s.id==='5.7') update57Fields();
+  if(s.id==='7.7M') update77MFields();
 }
 
 function zoneRemoteHTML() {
@@ -1639,6 +1667,20 @@ function getSingleVals() {
   vals.zone = document.getElementById('inp_zone')?.value||'A';
   vals.remote = document.getElementById('inp_remote')?.value||'direct';
   return vals;
+}
+
+function update77MFields() {
+  const type = document.getElementById('inp_inputType')?.value;
+  const wFU  = document.getElementById('wrap_fuVal');
+  const wKRW = document.getElementById('wrap_krwVal');
+  if(!wFU) return;
+  if(type==='fu') {
+    wFU.style.display=''; wFU.previousElementSibling.style.display='';
+    wKRW.style.display='none'; wKRW.previousElementSibling.style.display='none';
+  } else {
+    wFU.style.display='none'; wFU.previousElementSibling.style.display='none';
+    wKRW.style.display=''; wKRW.previousElementSibling.style.display='';
+  }
 }
 
 function update121Fields() {
