@@ -705,18 +705,34 @@ const SECTIONS = [
     calcFn:function(v){ return v.qty<=5000?50*v.qty/100:2500+30*((v.qty-5000)/100); }
   },
   // ── Chapter 5 Electrical ─────────────────────────────────────
-  { id:'5.1', name:'Motors',
+  { id:'5.1', name:'Motors', multi:true,
     products:['AC Motor','DC Motor','Propulsion Motor','Electric Motor','Motor'],
     unit:'Power (kW)', noSplit:true,
-    inputs:[
-      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
-      {id:'hv',type:'select',label:'전압',options:[{val:'lv',label:'Low Voltage'},{val:'hv',label:'High Voltage DC≥1500V/AC≥1000V (+20%)'}]},
-      {id:'prop',type:'select',label:'추진용',options:[{val:'no',label:'일반'},{val:'yes',label:'Propulsion Motor (+25%)'}]},
-      {id:'qty2',type:'select',label:'수량 할인',options:[{val:'1',label:'1대'},{val:'2',label:'2대 (-10%)'},{val:'3',label:'3대 이상 (-15%)'}]},
+    note:'※ 각각 개별 kW로 FU 산출 후 합산. 총 대수 기준 할인: 2대 -10%, 3대 이상 -15%.',
+    multiFields:[
+      {id:'kw',   type:'number', label:'정격 출력 (kW)', w:'1.4fr', placeholder:'예: 500'},
+      {id:'hv',   type:'select', label:'전압',           w:'1.8fr', options:[{v:'lv',l:'Low Voltage'},{v:'hv',l:'High Voltage (+20%)'}]},
+      {id:'prop', type:'select', label:'추진용',         w:'1.2fr', options:[{v:'no',l:'일반'},{v:'yes',l:'Propulsion (+25%)'}]},
+      {id:'qty',  type:'number', label:'수량',           w:'0.6fr', placeholder:'1'},
     ],
-    note:'※ 여러 대인 경우 각각 개별 kW로 FU를 산출한 후 합산합니다.',
-    calcFn:function(v){ return motorFU(v.qty); },
-    calcModFn:function(v,fu){ let m=1; if(v.hv==='hv')m*=1.20; if(v.prop==='yes')m*=1.25; if(v.qty2==='2')m*=0.90; if(v.qty2==='3')m*=0.85; return fu*m; }
+    multiCalcFn:function(v){
+      let fu = motorFU(parseFloat(v.kw)||0);
+      if(v.hv==='hv') fu*=1.20;
+      if(v.prop==='yes') fu*=1.25;
+      return fu*(parseInt(v.qty)||1);
+    },
+    multiLabelFn:function(v){
+      const hv=v.hv==='hv'?'[HV]':''; const pr=v.prop==='yes'?'[Prop]':'';
+      return `${v.kw||0}kW ${hv}${pr} ×${v.qty||1}`;
+    },
+    multiPostFn:function(lines){
+      const totalUnits=lines.reduce((s,r)=>s+(parseInt(r.v.qty)||1),0);
+      let disc=1;
+      if(totalUnits>=3) disc=0.85;
+      else if(totalUnits>=2) disc=0.90;
+      const totalFU=lines.reduce((s,r)=>s+r.fu,0);
+      return { totalFU: totalFU*disc, disc, totalUnits };
+    },
   },
   { id:'5.2', name:'Generators',
     products:['AC Generator','DC Generator','Propulsion Generator','Alternator','Generator'],
