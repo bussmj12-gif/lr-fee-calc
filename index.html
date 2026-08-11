@@ -1346,10 +1346,34 @@ const SECTIONS = [
   },
   // ── Chapter 12 Pressure Vessels ─────────────────────────────
   { id:'12.1', name:'Boilers',
-    products:['Boiler','Exhaust Gas Boiler','Oil Fired Boiler','Composite Boiler','Thermal Oil Heater'],
+    products:['Boiler','Exhaust Gas Boiler','Oil Fired Boiler','Composite Boiler','Thermal Oil Heater','Fin Tube Boiler'],
     unit:'Heating Surface (m²)',
-    inputs:[{id:'qty',type:'number',label:'Overall Heating Surface (m²)',placeholder:'예: 150'}],
-    calcFn:function(v){ const hs=v.qty; if(hs<=100)return 2400; if(hs<=200)return 2400+60*Math.ceil((hs-100)/10); if(hs<=600)return 3000+150*Math.ceil((hs-200)/20); if(hs<=1200)return 6000+150*Math.ceil((hs-600)/30); if(hs<=2000)return 9000+150*Math.ceil((hs-1200)/40); return 12000+150*Math.ceil((hs-2000)/50); }
+    note:'※ Boiler Type에 따라 Overall Heating Surface(HS)가 자동 계산됩니다. E = Exhaust gas side, F = Fired side.',
+    inputs:[
+      {id:'boilerType',type:'select',label:'Boiler Type',options:[
+        {val:'exhaust', label:'Exhaust Gas Boiler — HS = 0.75 × E'},
+        {val:'composite', label:'Composite Boiler — HS = 0.85E + F'},
+        {val:'fintube', label:'Fin Tube Type Boiler — HS = 1.1 × F'},
+        {val:'direct', label:'직접 입력 — HS 직접 입력'},
+      ]},
+      {id:'eVal', type:'number', label:'E — Exhaust gas heating surface (m²)', placeholder:'예: 200'},
+      {id:'fVal', type:'number', label:'F — Fired heating surface (m²)', placeholder:'예: 100'},
+      {id:'qty',  type:'number', label:'HS — Overall Heating Surface 직접 입력 (m²)', placeholder:'예: 150'},
+    ],
+    calcFn:function(v){
+      let hs=0;
+      const E=parseFloat(v.eVal)||0, F=parseFloat(v.fVal)||0;
+      if(v.boilerType==='exhaust')   hs=0.75*E;
+      else if(v.boilerType==='composite') hs=0.85*E+F;
+      else if(v.boilerType==='fintube')  hs=1.1*F;
+      else hs=parseFloat(v.qty)||0;
+      if(hs<=100) return 2400;
+      if(hs<=200) return 2400+60*Math.ceil((hs-100)/10);
+      if(hs<=600) return 3000+150*Math.ceil((hs-200)/20);
+      if(hs<=1200) return 6000+150*Math.ceil((hs-600)/30);
+      if(hs<=2000) return 9000+150*Math.ceil((hs-1200)/40);
+      return 12000+150*Math.ceil((hs-2000)/50);
+    },
   },
   { id:'12.3', name:'Plate Type Heat Exchangers', multi:true,
     products:['Plate Heat Exchanger','Plate Type Heat Exchanger','PHE','Plate Cooler','Heat Exchanger'],
@@ -1559,14 +1583,18 @@ function renderSingleCalc() {
   if(s.note) html+=`<div class="info-box" style="margin-bottom:10px">${s.note}</div>`;
   for(const inp of (s.inputs||[])) {
     html+=`<label for="inp_${inp.id}">${inp.label}</label>`;
-    if(inp.type==='number') html+=`<input type="number" id="inp_${inp.id}" placeholder="${inp.placeholder||''}" min="0" step="any">`;
-    else html+=`<select id="inp_${inp.id}" ${s.id==='5.7'&&inp.id==='sysType'?'onchange="update57Fields()"':''}>${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
+    if(inp.type==='number') {
+      const wrapId = s.id==='12.1' ? `id="wrap_${inp.id}"` : '';
+      html+=`<div ${wrapId}><input type="number" id="inp_${inp.id}" placeholder="${inp.placeholder||''}" min="0" step="any"></div>`;
+    } else html+=`<select id="inp_${inp.id}" ${s.id==='5.7'&&inp.id==='sysType'?'onchange="update57Fields()"':''} ${s.id==='12.1'&&inp.id==='boilerType'?'onchange="update121Fields()"':''}>${(inp.options||[]).map(o=>`<option value="${o.val}">${o.label}</option>`).join('')}</select>`;
   }
   // 5.7 초기 상태 적용 (페이지 로드 시 첫 옵션 기준)
   if(s.id==='5.7') html+=`<script>setTimeout(update57Fields,0)<\/script>`;
   html+=zoneRemoteHTML();
   html+=`<div class="btn-group"><button class="btn btn-primary" onclick="calcSingle()" style="flex:2">계산하기</button><button class="btn btn-sec" onclick="showSearch()" style="flex:1">다시 검색</button></div></div>`;
   document.getElementById('calcArea').innerHTML = html;
+  if(s.id==='12.1') update121Fields();
+  if(s.id==='5.7') update57Fields();
 }
 
 function zoneRemoteHTML() {
@@ -1599,6 +1627,31 @@ function getSingleVals() {
   vals.zone = document.getElementById('inp_zone')?.value||'A';
   vals.remote = document.getElementById('inp_remote')?.value||'direct';
   return vals;
+}
+
+function update121Fields() {
+  const type = document.getElementById('inp_boilerType')?.value;
+  const wE   = document.getElementById('wrap_eVal');
+  const wF   = document.getElementById('wrap_fVal');
+  const wHS  = document.getElementById('wrap_qty');
+  const lE   = wE?.previousElementSibling;  // label
+  const lF   = wF?.previousElementSibling;
+  const lHS  = wHS?.previousElementSibling;
+  if(!wE) return;
+  // 초기화
+  [wE,wF,wHS].forEach(w=>{ if(w){ w.style.display=''; w.previousElementSibling.style.display=''; } });
+  if(type==='exhaust') {
+    wF.style.display='none'; wF.previousElementSibling.style.display='none';
+    wHS.style.display='none'; wHS.previousElementSibling.style.display='none';
+  } else if(type==='composite') {
+    wHS.style.display='none'; wHS.previousElementSibling.style.display='none';
+  } else if(type==='fintube') {
+    wE.style.display='none'; wE.previousElementSibling.style.display='none';
+    wHS.style.display='none'; wHS.previousElementSibling.style.display='none';
+  } else { // direct
+    wE.style.display='none'; wE.previousElementSibling.style.display='none';
+    wF.style.display='none'; wF.previousElementSibling.style.display='none';
+  }
 }
 
 function update57Fields() {
