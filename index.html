@@ -92,6 +92,14 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 /* Info / hint boxes */
 .info-box { font-size: 12px; color: var(--text2); padding: 9px 12px; background: var(--primary-light); border-radius: var(--radius-sm); margin-top: 10px; border-left: 3px solid var(--primary); line-height: 1.7; }
 .warn-box { font-size: 12px; padding: 9px 12px; background: var(--warning-light); border-radius: var(--radius-sm); margin-top: 10px; border-left: 3px solid var(--warning); color: #664d03; line-height: 1.7; }
+.time-base-btn { width:100%; padding:9px; margin-top:10px; background:transparent; border:1px dashed var(--border2); border-radius:var(--radius-sm); color:var(--text2); font-size:13px; cursor:pointer; transition:all .15s; }
+.time-base-btn:hover { border-color:var(--primary); color:var(--primary); }
+.time-base-box { margin-top:10px; padding:12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); }
+.time-input-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.time-input-row input { width:70px; padding:6px 8px; border:1px solid var(--border2); border-radius:var(--radius-sm); font-size:14px; text-align:center; }
+.time-result-box { padding:10px 12px; border-radius:var(--radius-sm); font-size:13px; margin-top:6px; }
+.time-result-box.higher { background:#fff3cd; border:1px solid #ffc107; }
+.time-result-box.lower { background:#d4edda; border:1px solid #28a745; }
 .hint { font-size: 12px; color: var(--text2); padding: 7px 11px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 12px; border: 1px solid var(--border); }
 .sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 
@@ -244,6 +252,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 // ═══════════════════════════════════════════════════════════════
 const FF = 1225.7784;
 const MIN_FEE = 884369;
+const TIME_BASE_RATE = 446519; // KRW per hour
 const ZONES = { A:202644.75, B:474627.30, C:746726.40, D:1018710.00, E:1290809.10, F:0, none:0 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1808,6 +1817,42 @@ function onRemoteChange(sel) {
   }
 }
 
+function calcTimeBase() {
+  const hrs = parseFloat(document.getElementById('tb_hours')?.value) || 0;
+  const mins = parseFloat(document.getElementById('tb_mins')?.value) || 0;
+  const totalHrs = hrs + mins/60;
+  if(totalHrs <= 0) return;
+
+  const timeFee = Math.round(totalHrs * TIME_BASE_RATE);
+  const productFee = parseInt(document.getElementById('tb_productFee')?.value) || 0;
+  const zoneAmt = parseInt(document.getElementById('tb_zoneAmt')?.value) || 0;
+
+  const isHigher = timeFee > productFee;
+  const finalFee = Math.max(timeFee, productFee) + zoneAmt;
+  const box = document.getElementById('timeResultBox');
+  box.className = 'time-result-box ' + (isHigher ? 'higher' : 'lower');
+  box.innerHTML = `
+    <div style="margin-bottom:6px;font-weight:600;">${isHigher ? '⚠ Time Base가 더 높습니다' : '✓ Product Tariff가 더 높습니다'}</div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>Time Base Fee (${hrs}h ${mins}m)</span><span style="font-weight:600;">KRW ${timeFee.toLocaleString()}</span></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>Product Tariff Fee</span><span style="font-weight:600;">KRW ${productFee.toLocaleString()}</span></div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid rgba(0,0,0,.1);font-weight:700;font-size:14px;">
+      <span>적용 청구액 (+ Zone)</span>
+      <span style="color:var(--primary);">KRW ${finalFee.toLocaleString()}</span>
+    </div>`;
+  box.style.display = 'block';
+}
+
+function toggleTimeBase(productFee, zoneAmt) {
+  const box = document.getElementById('timeBaseBox');
+  if(box.style.display === 'none' || !box.style.display) {
+    box.style.display = 'block';
+    document.getElementById('tb_productFee').value = productFee;
+    document.getElementById('tb_zoneAmt').value = zoneAmt;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
 function calcSingle() {
   const s = currentSection, v = getSingleVals();
   let baseFU = s.calcFn ? s.calcFn(v) : 0;
@@ -1974,6 +2019,17 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
         <button class="btn btn-primary" onclick="addPendingToVisit()" style="flex:2">방문 목록에 추가</button>
         <button class="btn btn-sec" onclick="showCalc()" style="flex:1">수치 수정</button>
         <button class="btn btn-sec" onclick="window.print()" style="flex:1;">🖨 프린트</button>
+      </div>
+      <button class="time-base-btn no-print" onclick="toggleTimeBase(${Math.round(isMin?MIN_FEE:rawFee)}, ${zoneAmt})">⏱ Time Base 확인</button>
+      <div id="timeBaseBox" style="display:none;" class="time-base-box no-print">
+        <input type="hidden" id="tb_productFee" value="0">
+        <input type="hidden" id="tb_zoneAmt" value="0">
+        <label>시간 입력 (시간당 KRW ${TIME_BASE_RATE.toLocaleString()})</label>
+        <div class="time-input-row">
+          <input type="number" id="tb_hours" placeholder="0" min="0" oninput="calcTimeBase()"> 시간
+          <input type="number" id="tb_mins" placeholder="0" min="0" max="59" oninput="calcTimeBase()"> 분
+        </div>
+        <div id="timeResultBox" style="display:none;"></div>
       </div>
     </div>`;
 }
