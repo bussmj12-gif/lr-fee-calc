@@ -440,7 +440,7 @@ function renderVisit() {
   // (Remote 가산만으로 그룹 소속(n)이 바뀌면 다른 프로젝트의 분할 하한까지 흔들리기 때문)
   visitProjects.forEach(p => {
     const noRemoteFee = (p.rawProductFeeNoRemote != null ? p.rawProductFeeNoRemote : p.rawProductFee);
-    p.inMinFeeGroup = noRemoteFee < MIN_FEE;
+    p.inMinFeeGroup = noRemoteFee <= MIN_FEE;
   });
 
   // Min Fee 미달 프로젝트 파악 후 §3.6 분할 재계산
@@ -1374,7 +1374,12 @@ const SECTIONS = [
       {id:'weight',type:'select',label:'개당 무게',options:[{val:'0.1',label:'≤0.1 kg → 1 Min Fee / 5,000개'},{val:'1',label:'0.11–1 kg → 1 Min Fee / 1,000개'},{val:'5',label:'1.1–5 kg → 1 Min Fee / 200개'},{val:'10',label:'5.1–10 kg → 1 Min Fee / 100개'},{val:'100',label:'10.1–100 kg → 1 Min Fee / 50개'},{val:'300',label:'101–300 kg → 1 Min Fee / 25개'}]},
       {id:'qty',type:'number',label:'수량 (개)',placeholder:'예: 200'},
     ],
-    calcFn:function(v){ const lim={'0.1':5000,'1':1000,'5':200,'10':100,'100':50,'300':25}; const qty=parseInt(v.qty)||1; return Math.ceil(qty/(lim[v.weight]||1000))*MIN_FEE/FF; }
+    calcFn:function(v){
+      const lim={'0.1':5000,'1':1000,'5':200,'10':100,'100':50,'300':25};
+      const qty=parseInt(v.qty)||1;
+      const groups=Math.ceil(qty/(lim[v.weight]||1000));
+      return groups*(MIN_FEE/FF);
+    }
   },
   { id:'10.10', name:'Fabricated Pipes, Hoses & Tubes, Expansion Bellows', multi:true,
     products:['Fabricated Pipe','Hose','Tube','Expansion Bellows','Ejector','Flexible Joint'],
@@ -1860,7 +1865,7 @@ function calcSingle() {
   const isRemote = v.remote==='remote';
   if(isRemote) modFU *= 1.10;
   const rawFee = modFU * FF;
-  const isMin = !s.noMinFee && rawFee < MIN_FEE;
+  const isMin = !s.noMinFee && rawFee <= MIN_FEE;
   const isNoSplit = s.noSplit === true || (typeof s.noSplitFn === 'function' && s.noSplitFn(v));
   const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
   const customFFLabel = s.customFFLabel ? s.customFFLabel(v) : null;
