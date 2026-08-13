@@ -612,7 +612,7 @@ const SECTIONS = [
     products:['Steel casting','Copper Alloy casting','Aluminium casting','Stainless Steel Casting','Cast Steel'],
     unit:'Weight (kg)',
     multiFields:[
-      {id:'site',type:'select',label:'검사 장소',w:'1.6fr',options:[{v:'mfr',l:'제조사 현장 (4.2.1)'},{v:'machine',l:'기계가공 현장 (4.2.2)'}]},
+      {id:'site',type:'select',label:'검사 장소',w:'1.6fr',options:[{v:'mfr',l:'주강/주물공장 (4.2.1)'},{v:'machine',l:'가공업체 (4.2.2)'}]},
       {id:'cond',type:'select',label:'납품 조건',w:'1.4fr',options:[{v:'finished',l:'Finished'},{v:'rough',l:'As Rough'},{v:'ascast',l:'As Cast'}]},
       {id:'mat',type:'select',label:'재질',w:'1.1fr',options:[{v:'none',l:'Carbon'},{v:'ss',l:'SUS+20%'},{v:'cu',l:'Cu+20%'},{v:'alloy',l:'Alloy+30%'},{v:'al',l:'Al+40%'}]},
       {id:'wt',type:'number',label:'무게(kg)',w:'0.9fr',placeholder:'예: 5000'},
@@ -637,13 +637,13 @@ const SECTIONS = [
         return fee/FF;
       }
     },
-    multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',ascast:'As Cast'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'제조사':'기계가공'})`; }
+    multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',ascast:'As Cast'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'주강/주물공장':'가공업체'})`; }
   },
   { id:'4.3', name:'Forgings', multi:true,
     products:['Steel forging','Copper Alloy forging','Crankshaft','Propeller Shaft','Piston Rod','Cylinder Head','Forging'],
     unit:'Weight (kg)',
     multiFields:[
-      {id:'site',type:'select',label:'검사 장소',w:'1.6fr',options:[{v:'mfr',l:'제조사 현장 (4.3.1)'},{v:'machine',l:'기계가공 현장 (4.3.2)'}]},
+      {id:'site',type:'select',label:'검사 장소',w:'1.6fr',options:[{v:'mfr',l:'단조공장 (4.3.1)'},{v:'machine',l:'가공업체 (4.3.2)'}]},
       {id:'cond',type:'select',label:'납품 조건',w:'1.4fr',options:[{v:'finished',l:'Finished'},{v:'rough',l:'As Rough'},{v:'asforged',l:'As Forged'}]},
       {id:'mat',type:'select',label:'재질',w:'1.1fr',options:[{v:'none',l:'Carbon'},{v:'ss',l:'SUS+20%'},{v:'cu',l:'Cu+20%'},{v:'alloy',l:'Alloy+30%'},{v:'al',l:'Al+40%'}]},
       {id:'wt',type:'number',label:'무게(kg)',w:'0.9fr',placeholder:'예: 10000'},
@@ -668,7 +668,7 @@ const SECTIONS = [
         return fee/FF;
       }
     },
-    multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',asforged:'As Forged'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'제조사':'기계가공'})`; }
+    multiLabelFn:function(v){ const c={none:'Carbon',ss:'SUS',cu:'Cu',alloy:'Alloy',al:'Al'}; const d={finished:'Finished',rough:'As Rough',asforged:'As Forged'}; return `${c[v.mat]} ${d[v.cond]} ${v.wt||0}kg (${v.site==='mfr'?'단조공장':'가공업체'})`; }
   },
   { id:'4.5', name:'Testing / Retesting / Validation of Materials',
     products:['Material Testing','Heat Number','Charge Number','Retesting','Transfer of Marks','Lab Attendance'],
