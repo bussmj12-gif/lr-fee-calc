@@ -131,7 +131,9 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 .project-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; background: #fff; position: relative; }
 .project-card .pc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
 .project-card .pc-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
-.project-card .pc-fee { font-size: 14px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+.project-card .pc-fee { font-size: 12px; font-weight: 700; color: var(--primary); white-space: nowrap; margin-top: 3px; }
+.project-card .pc-fee-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.project-card .pc-fee-line { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
 .project-card .pc-detail { font-size: 11px; color: var(--text2); }
 .project-card .pc-minfee { font-size: 11px; color: var(--warning); font-weight: 600; }
 .project-card .pc-actions { display: flex; gap: 6px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
@@ -500,14 +502,15 @@ function renderVisit() {
     <div class="project-card">
       <div class="pc-header">
         <div class="pc-title"><span style="display:inline-block;background:var(--primary);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px;margin-right:6px;">${i+1}</span>Section ${p.secId} · ${p.secName}</div>
-        <div class="pc-fee">KRW ${Math.round(p.finalTotal).toLocaleString()}</div>
+        <div class="pc-fee-col">
+          <div class="pc-fee-line">Product Fee: KRW ${Math.round(p.finalProductFee).toLocaleString()}</div>
+          ${p.zoneAmt>0?'<div class=\"pc-fee-line\" style=\"color:var(--danger)\">Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString()+'</div>':''}
+          <div class="pc-fee">Product + Zonal: KRW ${Math.round(p.finalTotal).toLocaleString()}</div>
+        </div>
       </div>
-      <div class="pc-detail">
-        Product Fee: KRW ${Math.round(p.finalProductFee).toLocaleString()}
-        ${p.zoneAmt>0?' · <span style="color:var(--danger)">Zone '+p.zone+': KRW '+p.zoneAmt.toLocaleString()+'</span>':''}
-        ${p.isRemote && p.remoteApplied?' · Remote +10%':''}
-        ${p.isRemote && !p.remoteApplied?' · Remote Survey (Min Fee 미달로 10% 미가산)':''}
-      </div>
+      ${p.isRemote ? `<div class="pc-detail">
+        ${p.remoteApplied?'Remote +10%':'Remote Survey (Min Fee 미달로 10% 미가산)'}
+      </div>` : ''}
       ${p.inMinFeeGroup && p.noSplit ? '<div class=\"pc-minfee\">⚠ Min Fee 적용 (§3.6 분할 제외)</div>' : ''}
       ${p.inMinFeeGroup && !p.noSplit && p.splitApplied ? '<div class=\"pc-minfee\">⚠ Min Fee 분할 적용 (원래 KRW '+Math.round(p.rawProductFeeNoRemote!=null?p.rawProductFeeNoRemote:p.rawProductFee).toLocaleString()+')</div>' : ''}
       ${p.inMinFeeGroup && !p.noSplit && !p.splitApplied ? '<div class=\"pc-minfee\" style=\"color:var(--success)\">✓ Actual Fee 적용 (분할 하한 KRW '+Math.round(split).toLocaleString()+' 초과)</div>' : ''}
@@ -1274,7 +1277,7 @@ const SECTIONS = [
     unit:'Flow Rate (m³/hr)',
     note:'※ 여러 대인 경우 각 펌프의 FU를 개별 계산 후 합산합니다.',
     multiFields:[
-      {id:'pumpType',type:'select',label:'펌프 유형',w:'1.8fr',options:[{v:'disp',l:'Displacement Pump'},{v:'dynamic',l:'Dynamic Pump (×1.2)'},{v:'hydraulic',l:'Hydraulic Pump (×1.5)'}]},
+      {id:'pumpType',type:'select',label:'펌프 유형',w:'1.8fr',options:[{v:'dynamic',l:'Dynamic Pump (×1.2)'},{v:'disp',l:'Displacement Pump'},{v:'hydraulic',l:'Hydraulic Pump (×1.5)'}]},
       {id:'flow',type:'number',label:'Flow Rate(m³/hr)',w:'1.1fr',placeholder:'예: 100'},
       {id:'qty',type:'number',label:'수량',w:'0.5fr',placeholder:'1'},
       {id:'cryo',type:'select',label:'Cryogenic',w:'0.9fr',options:[{v:'no',l:'일반'},{v:'yes',l:'×2'}]},
