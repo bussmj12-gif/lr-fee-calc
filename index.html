@@ -631,11 +631,18 @@ const SECTIONS = [
         if(v.cond==='ascast') fu*=0.80;
         return fu;
       } else {
-        // 기계가공 현장: 전체 금액(KRW) 계산 후 비율 적용 → FU 역산
+        // 기계가공 현장
+        if(v.cond==='finished'){
+          // Finished(비율 100%)는 제조사 현장과 동일한 검사이므로 raw FU를 그대로 반환.
+          // Min Fee 판정/§3.6 분할 그룹핑은 반드시 calcMulti()·renderVisit()에서 일괄 처리되어야
+          // 단조공장(mfr) 항목과 동일하게 Min Fee 미달 판정 및 분할 혜택을 받을 수 있다.
+          // 여기서 Math.max(fu*FF, MIN_FEE)로 미리 floor해버리면 그 정보가 사라져
+          // 방문 그룹에 포함돼도 항상 풀 Min Fee가 고정 청구되는 오류가 발생한다.
+          return fu;
+        }
+        // Rough/As Cast: 전체 금액(Min Fee 포함, KRW) 계산 후 비율 적용 → FU 역산
         const fullFee=Math.max(fu*FF, MIN_FEE);
-        let ratio=1;
-        if(v.cond==='rough') ratio=0.20;
-        else if(v.cond==='ascast') ratio=0.30;
+        const ratio = v.cond==='rough' ? 0.20 : 0.30;
         const fee=fullFee*ratio; // Min Fee는 calcMulti()에서 remote 가산 후 한 번만 적용
         return fee/FF;
       }
@@ -662,11 +669,18 @@ const SECTIONS = [
         if(v.cond==='asforged') fu*=0.80;
         return fu;
       } else {
-        // 기계가공 현장: 전체 금액(KRW) 계산 후 비율 적용 → FU 역산
+        // 기계가공 현장
+        if(v.cond==='finished'){
+          // Finished(비율 100%)는 단조공장과 동일한 검사이므로 raw FU를 그대로 반환.
+          // Min Fee 판정/§3.6 분할 그룹핑은 반드시 calcMulti()·renderVisit()에서 일괄 처리되어야
+          // 단조공장(mfr) 항목과 동일하게 Min Fee 미달 판정 및 분할 혜택을 받을 수 있다.
+          // 여기서 Math.max(fu*FF, MIN_FEE)로 미리 floor해버리면 그 정보가 사라져
+          // 방문 그룹에 포함돼도 항상 풀 Min Fee가 고정 청구되는 오류가 발생한다.
+          return fu;
+        }
+        // Rough/As Forged: 전체 금액(Min Fee 포함, KRW) 계산 후 비율 적용 → FU 역산
         const fullFee=Math.max(fu*FF, MIN_FEE);
-        let ratio=1;
-        if(v.cond==='rough') ratio=0.20;
-        else if(v.cond==='asforged') ratio=0.30;
+        const ratio = v.cond==='rough' ? 0.20 : 0.30;
         const fee=fullFee*ratio; // Min Fee는 calcMulti()에서 remote 가산 후 한 번만 적용
         return fee/FF;
       }
