@@ -1756,7 +1756,7 @@ function zoneRemoteHTML() {
   return `<div class="sep"></div>
   <div class="two-col">
     <div><label>Zone 선택</label>
-    <select id="inp_zone">
+    <select id="inp_zone" onchange="onZoneChange(this)">
       <option value="A">Zone A – KRW 202,644.75</option>
       <option value="B">Zone B – KRW 474,627.30</option>
       <option value="C">Zone C – KRW 746,726.40</option>
@@ -1839,6 +1839,20 @@ function onRemoteChange(sel) {
   }
 }
 
+function onZoneChange(sel) {
+  const remoteEl = document.getElementById('inp_remote');
+  if(!remoteEl) return;
+  if(sel.value === 'none') {
+    remoteEl.value = 'remote';
+    remoteEl.disabled = true;
+    remoteEl.style.opacity = '0.4';
+  } else {
+    remoteEl.disabled = false;
+    remoteEl.style.opacity = '1';
+    if(remoteEl.value === 'remote') remoteEl.value = 'direct';
+  }
+}
+
 function calcTimeBase() {
   const hrs = parseFloat(document.getElementById('tb_hours')?.value) || 0;
   const mins = parseFloat(document.getElementById('tb_mins')?.value) || 0;
@@ -1879,9 +1893,9 @@ function calcSingle() {
   const s = currentSection, v = getSingleVals();
   let baseFU = s.calcFn ? s.calcFn(v) : 0;
   let modFU = s.calcModFn ? s.calcModFn(v, baseFU) : baseFU;
-  const isRemote = v.remote==='remote';
-  if(isRemote) modFU *= 1.10;
-  const rawFee = modFU * FF;
+  const isRemote = v.remote==='remote' || v.zone==='none';
+  let rawFee = modFU * FF;
+  if(isRemote) rawFee *= 1.10;
   const isMin = !s.noMinFee && rawFee <= MIN_FEE;
   const isNoSplit = s.noSplit === true || (typeof s.noSplitFn === 'function' && s.noSplitFn(v));
   const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
@@ -1951,7 +1965,7 @@ function calcMulti() {
   const lines = getMultiRows();
   if(!lines.length){ alert('항목을 하나 이상 입력하세요.'); return; }
   const zone = document.getElementById('inp_zone')?.value||'A';
-  const isRemote = document.getElementById('inp_remote')?.value==='remote';
+  const isRemote = document.getElementById('inp_remote')?.value==='remote' || zone==='none';
 
   let totalFU, totalItems = lines.length;
   if(s.multiPostFn) {
@@ -1963,8 +1977,9 @@ function calcMulti() {
     totalFU = lines.reduce((sum,r)=>sum+r.fu, 0);
   }
 
-  if(isRemote) totalFU *= 1.10;
-  const rawFee = totalFU * FF;
+  const baseFU = totalFU;
+  let rawFee = totalFU * FF;
+  if(isRemote) rawFee *= 1.10;
   const isMin = rawFee < MIN_FEE;
 
   let zoneAmt = isRemote||zone==='none'||zone==='F' ? 0 : ZONES[zone]||0;
@@ -1975,7 +1990,7 @@ function calcMulti() {
   }
 
   const isNoSplitMulti = s.noSplit === true;
-  showResult(s, lines, totalFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplitMulti);
+  showResult(s, lines, baseFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplitMulti);
 }
 
 // ═══════════════════════════════════════════════════════════════
