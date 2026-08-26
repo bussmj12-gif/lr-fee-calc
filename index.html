@@ -458,23 +458,30 @@ function renderVisit() {
   let grandTotal = 0;
   visitProjects.forEach(p => {
     const noRemoteFee = (p.rawProductFeeNoRemote != null ? p.rawProductFeeNoRemote : p.rawProductFee);
+    // 실제로 10% Remote 가산이 적용됐는지 여부 (§10.9처럼 단일 Min Fee 그룹 내에서는
+    // rawProductFee와 rawProductFeeNoRemote가 같으므로 가산이 없었던 것으로 판단한다)
+    const remoteSurcharged = p.isRemote && p.rawProductFee > noRemoteFee + 0.5;
     if(!p.inMinFeeGroup) {
       // 실제 검사비(Remote 제외)가 이미 Min Fee를 초과 → Remote 포함 Actual Fee 그대로
       p.finalProductFee = p.rawProductFee;
       p.splitApplied = false;
-      p.remoteApplied = p.isRemote;
+      p.remoteApplied = remoteSurcharged;
     } else if(p.noSplit) {
       // Min Fee 미달이지만 §3.6 분할 제외 → Min Fee 전액 (Remote 가산 없음)
       p.finalProductFee = MIN_FEE;
       p.splitApplied = false;
       p.remoteApplied = false;
-    } else if(p.rawProductFee >= MIN_FEE) {
+    } else if(!p.flatMinFee && p.rawProductFee >= MIN_FEE + 0.5) {
       // Remote 10%를 더해도 (분할 전) 전체 Min Fee를 넘는 경우 → 그 값 그대로 청구
+      // §10.9의 1개 그룹(flatMinFee)은 "실제 검사비"라는 개념이 없이 항상 Min Fee 그 자체이므로
+      // 이 분기를 타지 않고 아래 분할 로직으로 넘어간다.
       p.finalProductFee = p.rawProductFee;
       p.splitApplied = false;
-      p.remoteApplied = p.isRemote;
-    } else if(noRemoteFee > split) {
+      p.remoteApplied = remoteSurcharged;
+    } else if(!p.flatMinFee && noRemoteFee > split) {
       // Remote 가산 없이 실제 검사비가 분할 하한을 초과 → Remote 가산 없이 실제 검사비 청구
+      // (§10.9 flatMinFee 프로젝트는 noRemoteFee가 항상 Min Fee 그 자체이므로 이 비교 자체가
+      //  무의미하며, 반드시 분할 로직을 적용해야 한다)
       p.finalProductFee = noRemoteFee;
       p.splitApplied = false;
       p.remoteApplied = false;
@@ -1895,12 +1902,24 @@ function calcSingle() {
   let modFU = s.calcModFn ? s.calcModFn(v, baseFU) : baseFU;
   const isRemote = v.remote==='remote' || v.zone==='none';
   let rawFee = modFU * FF;
-  if(isRemote) rawFee *= 1.10;
+  let remoteSurchargeApplied = false;
+  if(s.id === '10.9') {
+    // §10.9: 검사비는 항상 Min Fee의 정수배(Min Fee 그룹)로 계산된다.
+    // Remote 10%는 "1 Min Fee up to" 개수 이내(단일 그룹, rawFee<=MIN_FEE)에서는 가산하지 않고
+    // 개수를 초과해 그룹이 2개 이상일 때만(rawFee>MIN_FEE) 전체 금액에 10%를 가산한다.
+    if(isRemote && rawFee > MIN_FEE + 0.01) {
+      rawFee *= 1.10;
+      remoteSurchargeApplied = true;
+    }
+  } else if(isRemote) {
+    rawFee *= 1.10;
+    remoteSurchargeApplied = true;
+  }
   const isMin = !s.noMinFee && rawFee <= MIN_FEE;
   const isNoSplit = s.noSplit === true || (typeof s.noSplitFn === 'function' && s.noSplitFn(v));
   const zoneAmt = isRemote||v.zone==='none'||v.zone==='F' ? 0 : ZONES[v.zone]||0;
   const customFFLabel = s.customFFLabel ? s.customFFLabel(v) : null;
-  showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit, customFFLabel);
+  showResult(s, [], baseFU, modFU, rawFee, isMin, zoneAmt, v.zone, isRemote, isNoSplit, customFFLabel, remoteSurchargeApplied);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1990,14 +2009,16 @@ function calcMulti() {
   }
 
   const isNoSplitMulti = s.noSplit === true;
-  showResult(s, lines, baseFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplitMulti);
+  showResult(s, lines, baseFU, totalFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplitMulti, undefined, isRemote);
 }
 
 // ═══════════════════════════════════════════════════════════════
 // RESULT
 // ═══════════════════════════════════════════════════════════════
-function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplit, customFFLabel) {
+function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRemote, isNoSplit, customFFLabel, remoteSurchargeApplied) {
   isNoSplit = isNoSplit || false;
+  // remoteSurchargeApplied가 명시적으로 전달되지 않은 경우(기존 호출부와의 호환) isRemote와 동일하게 취급한다.
+  if(remoteSurchargeApplied === undefined) remoteSurchargeApplied = isRemote;
   hide(['pageCalc','pageSection','pageSearch','pageVisit']);
   show('pageResult');
 
@@ -2019,12 +2040,18 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
     secId: s.id,
     secName: s.name,
     rawProductFee: Math.round(rawFee),  // 실제 계산된 Product Fee (Min Fee 적용 전, Remote 포함)
-    rawProductFeeNoRemote: Math.round(isRemote ? rawFee/1.10 : rawFee),  // Remote 가산 전 금액 (Min Fee 분할 비교용)
+    rawProductFeeNoRemote: Math.round(remoteSurchargeApplied ? rawFee/1.10 : rawFee),  // Remote 가산 전 금액 (Min Fee 분할 비교용)
     zoneAmt: zoneAmt,
     zone: zone,
     isRemote: isRemote,
+    remoteSurchargeApplied: remoteSurchargeApplied,
     isMinFee: isMin,
     noSplit: isNoSplit,
+    // §10.9: 검사비가 항상 Min Fee의 정수배(그룹)로만 계산되어 "그 사이의 실제 계산값"이 존재하지
+    // 않는 섹션. 1개 그룹(=Min Fee 1건)인 경우, "실제 검사비"라는 개념 자체가 Min Fee와 동일하므로
+    // §3.6 분할 시 항상 분할 대상으로 취급해야 한다 (실제 검사비가 분할 하한을 초과한다는 이유로
+    // 분할을 건너뛰면 안 됨).
+    flatMinFee: (s.id === '10.9' && !remoteSurchargeApplied && Math.round(rawFee) <= MIN_FEE + 1),
     linesSummary: linesSummary
   };
 
@@ -2041,8 +2068,8 @@ function showResult(s, lines, baseFU, modFU, rawFee, isMin, zoneAmt, zone, isRem
       <div class="result-card">
         <div class="rrow"><span class="lbl">총 Fee Units</span><span class="val">${baseFU.toFixed(2)} FU</span></div>
         ${modFU.toFixed(2)!==baseFU.toFixed(2)?`<div class="rrow"><span class="lbl">특약 적용 후 FU</span><span class="val">${modFU.toFixed(2)} FU</span></div>`:''}
-        <div class="rrow"><span class="lbl">${customFFLabel||'× Fee Factor KRW 1,225.7784'}</span><span class="val">KRW ${Math.round(isRemote?rawFee/1.1:rawFee).toLocaleString()}</span></div>
-        ${isRemote?`<div class="rrow"><span class="lbl" style="font-weight:700">Remote +10%</span><span class="val" style="font-weight:700">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:''}
+        <div class="rrow"><span class="lbl">${customFFLabel||'× Fee Factor KRW 1,225.7784'}</span><span class="val">KRW ${Math.round(remoteSurchargeApplied?rawFee/1.1:rawFee).toLocaleString()}</span></div>
+        ${remoteSurchargeApplied?`<div class="rrow"><span class="lbl" style="font-weight:700">Remote +10%</span><span class="val" style="font-weight:700">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:(isRemote?`<div class="rrow"><span class="lbl" style="color:var(--text2)">Remote (Min Fee 1건 이내로 10% 미가산)</span><span class="val" style="color:var(--text2)">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`:'')}
         ${isMin?`<div class="rrow warn"><span class="lbl">⚠ Min Fee 미달 → Min Fee 적용</span><span class="val">KRW ${MIN_FEE.toLocaleString()}</span></div>`:`<div class="rrow"><span class="lbl">Product Fee</span><span class="val">KRW ${Math.round(rawFee).toLocaleString()}</span></div>`}
         ${zoneAmt>0?`<div class="rrow"><span class="lbl"${isRemote?'':' style="color:var(--danger)"'}>Zonal Fee${lines._zoneLabel?' ('+lines._zoneLabel+')':' (Zone '+zone+')'}</span><span class="val"${isRemote?'':' style="color:var(--danger)"'}>KRW ${zoneAmt.toLocaleString()}</span></div>`:''}
         <div class="rrow total"><span class="lbl">${isMin&&!isNoSplit?'예상 청구액 (분할 전)':'예상 청구액'}</span><span class="val">KRW ${Math.round(previewTotal).toLocaleString()}</span></div>
