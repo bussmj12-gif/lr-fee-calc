@@ -629,8 +629,10 @@ const SECTIONS = [
         return fu;
       } else {
         // 기계가공 현장: 전체 금액(KRW) 계산 후 비율 적용 → FU 역산
+        // "Finished"는 가공업체(4.2.2 Machining Location)에 존재하지 않는 납품조건.
+        // UI에서 제거했지만 방어적으로 As Cast(70% 할인) 기준으로 처리.
         const fullFee=Math.max(fu*FF, MIN_FEE);
-        let ratio=1;
+        let ratio=0.30;
         if(v.cond==='rough') ratio=0.20;
         else if(v.cond==='ascast') ratio=0.30;
         const fee=fullFee*ratio; // Min Fee는 calcMulti()에서 remote 가산 후 한 번만 적용
@@ -660,8 +662,10 @@ const SECTIONS = [
         return fu;
       } else {
         // 기계가공 현장: 전체 금액(KRW) 계산 후 비율 적용 → FU 역산
+        // "Finished"는 가공업체(4.3.2 Machining Location)에 존재하지 않는 납품조건.
+        // UI에서 제거했지만 방어적으로 As Forged(70% 할인) 기준으로 처리.
         const fullFee=Math.max(fu*FF, MIN_FEE);
-        let ratio=1;
+        let ratio=0.30;
         if(v.cond==='rough') ratio=0.20;
         else if(v.cond==='asforged') ratio=0.30;
         const fee=fullFee*ratio; // Min Fee는 calcMulti()에서 remote 가산 후 한 번만 적용
@@ -1971,13 +1975,37 @@ function addMultiRow() {
   div.style.gridTemplateColumns = cols;
   div.style.display = 'grid';
   let inner = '';
+  const needsCondFix = (s.id==='4.2' || s.id==='4.3');
   for(const f of s.multiFields) {
-    if(f.type==='select') inner+=`<select id="mf_${id}_${f.id}">${(f.options||[]).map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}</select>`;
+    if(f.type==='select') {
+      const onchangeAttr = (needsCondFix && f.id==='site') ? ` onchange="updateCastForgeCondOptions(${id})"` : '';
+      inner+=`<select id="mf_${id}_${f.id}"${onchangeAttr}>${(f.options||[]).map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}</select>`;
+    }
     else inner+=`<input type="number" id="mf_${id}_${f.id}" placeholder="${f.placeholder||''}" min="0" step="any">`;
   }
   inner+=`<button class="del-btn" onclick="document.getElementById('mrow_${id}').remove()">×</button>`;
   div.innerHTML = inner;
   document.getElementById('multiRows').appendChild(div);
+  if(needsCondFix) updateCastForgeCondOptions(id);
+}
+
+// 4.2 Castings / 4.3 Forgings: 가공업체(Machining Location) 선택 시 "Finished"는 GFS상
+// 존재하지 않는 납품조건이므로 제거. 제조사(Approved Manufacturer Site) 선택 시엔 전체 옵션 표시.
+// cond의 원래 옵션(Finished/As Rough/As Cast 또는 As Forged)은 섹션 정의에서 그대로 가져온다.
+function updateCastForgeCondOptions(id) {
+  const siteEl = document.getElementById(`mf_${id}_site`);
+  const condEl = document.getElementById(`mf_${id}_cond`);
+  if(!siteEl || !condEl) return;
+  const s = currentSection;
+  const condField = (s.multiFields||[]).find(f=>f.id==='cond');
+  if(!condField) return;
+  const allOptions = condField.options;
+  const isMachine = siteEl.value === 'machine';
+  const options = isMachine ? allOptions.filter(o=>o.v!=='finished') : allOptions;
+  const prevValue = condEl.value;
+  condEl.innerHTML = options.map(o=>`<option value="${o.v}">${o.l}</option>`).join('');
+  // 가공업체로 전환하면서 기존 선택값이 Finished였던 경우 목록의 첫 옵션(As Rough)으로 대체
+  condEl.value = options.some(o=>o.v===prevValue) ? prevValue : options[0].v;
 }
 
 function getMultiRows() {
