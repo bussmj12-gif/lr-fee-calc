@@ -890,15 +890,24 @@ const SECTIONS = [
       return result;
     }
   },
-  { id:'5.8', name:'Local, Individual, Group Starter Panels',
+  { id:'5.8', name:'Local, Individual, Group Starter Panels', multi:true,
     products:['Local Starter Panel','Starter Panel','Group Starter','Individual Panel'],
     unit:'Power (kW)',
-    inputs:[
-      {id:'qty',type:'number',label:'정격 출력 (kW)',placeholder:'예: 500'},
-      {id:'battery',type:'select',label:'Battery Panel',options:[{val:'no',label:'일반'},{val:'yes',label:'Battery Panel (+10%)'}]},
+    note:'※ Panel별 정격 출력(kW)로 개별 FU 산출 후 합산. Battery Panel은 해당 Panel에만 +10% 적용. 동일 사양 Panel은 수량으로 입력.',
+    multiFields:[
+      {id:'kw',     type:'number', label:'정격 출력 (kW)', w:'1.6fr', placeholder:'예: 500'},
+      {id:'battery',type:'select', label:'Battery Panel',  w:'1.4fr', options:[{v:'no',l:'일반'},{v:'yes',l:'Battery Panel (+10%)'}]},
+      {id:'qty',    type:'number', label:'수량',           w:'0.6fr', placeholder:'1'},
     ],
-    calcFn:function(v){ return starterFU(v.qty); },
-    calcModFn:function(v,fu){ return v.battery==='yes'?fu*1.10:fu; }
+    multiCalcFn:function(v){
+      let fu = starterFU(parseFloat(v.kw)||0);
+      if(v.battery==='yes') fu*=1.10;
+      return fu*(parseInt(v.qty)||1);
+    },
+    multiLabelFn:function(v){
+      const bt=v.battery==='yes'?' [Battery +10%]':'';
+      return `${v.kw||0}kW${bt} ×${parseInt(v.qty)||1}`;
+    },
   },
   { id:'5.9', name:'Alternative Marine Power (AMP) for Shore Connection Panels',
     products:['AMP Panel','Alternative Marine Power','Shore Connection Panel','Shore Power','Cold Ironing','OPS','Onshore Power Supply'],
