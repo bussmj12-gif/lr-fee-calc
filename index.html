@@ -1881,6 +1881,44 @@ function voiceSearchFromText(alts) {
     if(hits.length) { best = { text:a, q, hits }; break; }
     if(!best) best = { text:a, q, hits };
   }
+  window._voiceLast = best;
+  const direct = voicePickDirect(best);
+  if(direct) { voiceGoDirect(direct, best); return; }
+  voiceRenderList(best);
+}
+
+// 후보가 하나로 확정되는 경우에만 섹션을 바로 연다.
+//  ① 섹션 번호를 말한 경우  ② 검색 결과가 1개  ③ 말한 명칭이 한 섹션의 품목명/섹션명과 정확히 일치
+function voicePickDirect(best) {
+  if(!best || !best.hits.length) return null;
+  if(best.hits.length === 1) return best.hits[0];
+  const phrase = best.q.words.join(' ');
+  if(!phrase) return null;
+  const exact = best.hits.filter(s =>
+    normalize(s.name) === phrase || (s.products||[]).some(p => normalize(p) === phrase));
+  if(exact.length !== 1) return null;
+  // 정확히 일치해도 그 명칭이 다른 후보 섹션의 품목명/섹션명에 포함되어 있으면 범용 명칭으로 보고 목록을 보여준다.
+  // 예) "Crane"은 9.1 품목명과 정확히 일치하지만 9.2 Jib Crane, 9.5 Overhead Crane에도 포함됨 → 목록
+  const generic = best.hits.some(s => s !== exact[0] &&
+    (normalize(s.name).includes(phrase) || (s.products||[]).some(p => normalize(p).includes(phrase))));
+  return generic ? null : exact[0];
+}
+
+function voiceGoDirect(sec, best) {
+  selectSection(sec.id);
+  const banner = `<div class="voice-banner">🎤 인식: <b>"${escHtmlVoice(best.text)}"</b> → Section ${sec.id} 바로 연결`
+    + (best.hits.length > 1 || !best.q.section ? ` · <a href="javascript:void(0)" onclick="voiceRenderList(window._voiceLast)" style="color:var(--primary);font-weight:600">다른 섹션 보기</a>` : '')
+    + `</div>`;
+  // Shell Router 섹션(6.1, 12.4 등)은 계산 방식 선택이 필요하므로 ② 단계에 머문다.
+  if(currentSection.shellRouter) {
+    document.getElementById('sectionDetail').insertAdjacentHTML('afterbegin', banner);
+    return;
+  }
+  goToCalc();
+  document.getElementById('calcArea').insertAdjacentHTML('afterbegin', banner);
+}
+
+function voiceRenderList(best) {
   goSearch();
   const input = document.getElementById('searchInput');
   input.value = best.q.section || best.q.words.join(' ');
