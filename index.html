@@ -1750,8 +1750,12 @@ const VOICE_KO_MAP = {
   '창문':'window','윈도우':'window','강재':'steel','강판':'steel plate','후판':'plate','형강':'section','앵글':'angle',
   '주조':'casting','주강':'casting','단조':'forging','알루미늄':'aluminium','동관':'copper','스테인리스':'stainless',
   '스키드':'skid','소화기':'extinguisher','소화':'fire','가스':'gas','오일':'oil','연료':'fuel','유압':'hydraulic','공기':'air',
+  '리테스팅':'retesting','리테스트':'retesting','재시험':'retesting','테스팅':'testing','테스트':'testing',
+  '밸리데이션':'validation','벨리데이션':'validation',
   '스크러버':'egcs','평형수':'bwts','밸러스트':'bwts','엘엔지':'lng','엘피지':'lpg','암모니아':'ammonia','질소':'nitrogen',
 };
+// 음성 바로가기: 이 단어만 말하면 다른 후보와 관계없이 지정 섹션의 ③ 수치 입력으로 바로 이동
+const VOICE_DIRECT = { 'pump':'10.1', 'testing':'4.5', 'retesting':'4.5', 'validation':'4.5' };
 const VOICE_KO_KEYS = Object.keys(VOICE_KO_MAP).sort((a,b)=>b.length-a.length);
 const VOICE_STOP = new Set(['the','and','for','with','kw','kva','kilo','watt','unit','units','set','sets','type','section']);
 
@@ -1882,9 +1886,21 @@ function voiceSearchFromText(alts) {
     if(!best) best = { text:a, q, hits };
   }
   window._voiceLast = best;
+  for(const a of alts) {
+    const sc = voiceShortcut(voiceToQuery(a));
+    if(sc) { const q = voiceToQuery(a); window._voiceLast = { text:a, q, hits:voiceFindSections(q) }; voiceGoDirect(sc, window._voiceLast); return; }
+  }
   const direct = voicePickDirect(best);
   if(direct) { voiceGoDirect(direct, best); return; }
   voiceRenderList(best);
+}
+
+// 말한 단어가 모두 바로가기 단어이고 같은 섹션을 가리키면 그 섹션 반환 (예: "pump", "testing", "retesting validation")
+function voiceShortcut(q) {
+  if(!q.words.length) return null;
+  const ids = new Set(q.words.map(w => VOICE_DIRECT[w] || null));
+  if(ids.size !== 1 || ids.has(null)) return null;
+  return SECTIONS.find(s => s.id === [...ids][0]) || null;
 }
 
 // 후보가 하나로 확정되는 경우에만 섹션을 바로 연다.
