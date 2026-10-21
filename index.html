@@ -1752,10 +1752,18 @@ const VOICE_KO_MAP = {
   '스키드':'skid','소화기':'extinguisher','소화':'fire','가스':'gas','오일':'oil','연료':'fuel','유압':'hydraulic','공기':'air',
   '리테스팅':'retesting','리테스트':'retesting','재시험':'retesting','테스팅':'testing','테스트':'testing',
   '밸리데이션':'validation','벨리데이션':'validation',
+  // 12.7 Pipe Fittings & Flanges
+  '파이프 피팅':'pipe fitting','파이프피팅':'pipe fitting','피팅':'fitting','엘보우':'elbow','엘보':'elbow','리듀서':'reducer','레듀서':'reducer','헤더':'header',
+  // 5.7 Control, Alarm & Safety System
+  '알람 모니터링 시스템':'alarm monitoring system','리모트 컨트롤 시스템':'remote control system','리모트컨트롤시스템':'remote control system',
+  '원격 제어 시스템':'remote control system','원격제어시스템':'remote control system','리모트':'remote','원격':'remote',
+  '컨트롤':'control','콘트롤':'control','시스템':'system','파워':'power','매니지먼트':'management','매니저먼트':'management',
+  '가스 디텍팅':'gas detecting','가스디텍팅':'gas detecting','가스 감지':'gas detecting','디텍팅':'detecting','디텍션':'detecting',
+  '에이치이 폼':'he foam','에이치이폼':'he foam','고팽창 포말':'he foam','폼':'foam','로컬':'local',
   '스크러버':'egcs','평형수':'bwts','밸러스트':'bwts','엘엔지':'lng','엘피지':'lpg','암모니아':'ammonia','질소':'nitrogen',
 };
 // 음성 바로가기: 이 단어만 말하면 다른 후보와 관계없이 지정 섹션의 ③ 수치 입력으로 바로 이동
-const VOICE_DIRECT = { 'pump':'10.1', 'testing':'4.5', 'retesting':'4.5', 'validation':'4.5' };
+const VOICE_DIRECT = { 'pump':'10.1', 'fitting':'12.7', 'fittings':'12.7', 'testing':'4.5', 'retesting':'4.5', 'validation':'4.5' };
 const VOICE_KO_KEYS = Object.keys(VOICE_KO_MAP).sort((a,b)=>b.length-a.length);
 const VOICE_STOP = new Set(['the','and','for','with','kw','kva','kilo','watt','unit','units','set','sets','type','section']);
 
@@ -1841,8 +1849,25 @@ function voiceCancel() {
   voiceClose();
 }
 
+// "에이엠에스" → "ams" 처럼 알파벳을 한글 발음으로 읽은 약어를 영문으로 변환.
+// 발화 전체(공백 제외)가 알파벳 발음으로만 이루어진 경우에만 적용 (일반 단어 오변환 방지)
+const VOICE_KO_LETTERS = [['더블유','w'],['에이치','h'],['에이','a'],['에프','f'],['에스','s'],['엑스','x'],['제이','j'],['케이','k'],['아이','i'],
+  ['브이','v'],['와이','y'],['제트','z'],['지','g'],['비','b'],['씨','c'],['시','c'],['디','d'],['이','e'],['엘','l'],['엠','m'],['엔','n'],['오','o'],['피','p'],['큐','q'],['알','r'],['티','t'],['유','u']];
+function voiceKoAcronym(text) {
+  let t = (text||'').replace(/\s+/g,''), out = '';
+  if(!t || /[^가-힣]/.test(t)) return null;
+  while(t.length) {
+    const hit = VOICE_KO_LETTERS.find(([k]) => t.startsWith(k));
+    if(!hit) return null;
+    out += hit[1]; t = t.slice(hit[0].length);
+  }
+  return out.length>=2 && out.length<=6 ? out : null;
+}
+
 // 음성 텍스트 → 영문 검색 키워드
 function voiceToQuery(text) {
+  const acr = voiceKoAcronym(text);
+  if(acr) return { section:null, words:[acr] };
   let t = ' ' + (text||'') + ' ';
   t = t.replace(/(\d+)\s*점\s*(\d+)/g, '$1.$2');            // "5점 8" → 5.8
   for(const k of VOICE_KO_KEYS) {
@@ -1851,6 +1876,12 @@ function voiceToQuery(text) {
   const secMatch = t.match(/\b(\d{1,2}\.\d{1,2})\b/);
   const words = normalize(t).split(/\s+/).filter(w => w && !/^\d/.test(w) && w.length>=2 && !VOICE_STOP.has(w));
   return { section: secMatch ? secMatch[1] : null, words: [...new Set(words)] };
+}
+
+// 4글자 이하 단어(AMS, SCR, ECC, pipe 등)는 단어 단위로만 일치 판정 — "ams"가 "beams"에, "scr"이 "screw"에 걸리는 것 방지
+function voiceHas(hay, w) {
+  if(w.length > 4) return hay.includes(w);
+  return new RegExp('(^|[^a-z0-9])' + w.replace(/\./g,'\\.') + '(s|es)?([^a-z0-9]|$)').test(hay);
 }
 
 // 키워드 매칭 점수로 섹션 정렬
@@ -1867,7 +1898,7 @@ function voiceFindSections(q) {
     const hay = normalize(s.name) + ' ' + prods.join(' ');
     let score = 0;
     const nm = normalize(s.name);
-    for(const w of q.words) { if(hay.includes(w)) score += 1; if(nm.includes(w)) score += 0.5; }
+    for(const w of q.words) { if(voiceHas(hay, w)) score += 1; if(voiceHas(nm, w)) score += 0.5; }
     if(prods.some(p => p.includes(phrase)) || normalize(s.name).includes(phrase)) score += q.words.length;
     return { s, score };
   }).filter(x => x.score > 0)
@@ -1916,7 +1947,7 @@ function voicePickDirect(best) {
   // 정확히 일치해도 그 명칭이 다른 후보 섹션의 품목명/섹션명에 포함되어 있으면 범용 명칭으로 보고 목록을 보여준다.
   // 예) "Crane"은 9.1 품목명과 정확히 일치하지만 9.2 Jib Crane, 9.5 Overhead Crane에도 포함됨 → 목록
   const generic = best.hits.some(s => s !== exact[0] &&
-    (normalize(s.name).includes(phrase) || (s.products||[]).some(p => normalize(p).includes(phrase))));
+    (voiceHas(normalize(s.name), phrase) || (s.products||[]).some(p => voiceHas(normalize(p), phrase))));
   return generic ? null : exact[0];
 }
 
