@@ -187,6 +187,20 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
   .no-print { display: none !important; }
   @page { size: A4; margin: 15mm 15mm 15mm 15mm; }
 }
+/* ── Standing Order notice ── */
+.so-overlay { position:fixed; inset:0; background:rgba(15,23,42,.6); display:none; align-items:center; justify-content:center; padding:16px; z-index:1100; }
+.so-overlay.open { display:flex; }
+.so-box { background:#fff; width:100%; max-width:520px; max-height:88vh; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+.so-head { background:var(--primary); color:#fff; padding:14px 18px; }
+.so-head .t { font-size:16px; font-weight:700; }
+.so-head .m { font-size:12px; opacity:.85; margin-top:3px; }
+.so-body { padding:18px; overflow:auto; font-size:14px; line-height:1.7; color:var(--text); white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
+.so-foot { padding:12px 18px 16px; border-top:1px solid var(--border); }
+.so-foot .btn { width:100%; }
+.so-foot .sub { font-size:11px; color:var(--text2); text-align:center; margin-top:8px; }
+#soBtn { flex-shrink:0; display:none; align-items:center; gap:6px; background:rgba(255,255,255,.14); color:#fff; font-size:11px; font-weight:600; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.35); white-space:nowrap; cursor:pointer; margin-right:6px; }
+@media print { .so-overlay, #soBtn { display:none !important; } }
+@media (max-width:500px){ #soBtn span:last-child, #tariffPdfLink span:last-child { display:none; } #soBtn, #tariffPdfLink { padding:8px 10px !important; } }
 /* ── Voice search ── */
 .voice-fab { position: fixed; right: 20px; bottom: 24px; width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 26px; box-shadow: 0 4px 14px rgba(10,92,158,.35); cursor: pointer; z-index: 900; display: flex; align-items: center; justify-content: center; }
 .voice-fab:active { transform: scale(.94); }
@@ -215,6 +229,7 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
       <div class="info" style="font-size:11px;opacity:.85;margin-top:1px;">Survey Fee Auto Calculation System</div>
       <div class="info" style="font-size:11px;opacity:.7;">South Korea · Fee Factor KRW 1,225.7784 · Min Fee KRW 884,369</div>
     </div>
+    <button id="soBtn" type="button" class="no-print" onclick="soShow(true)" title="Standing Order 다시 보기"><span style="font-size:14px;line-height:1;">📢</span><span>공지</span></button>
     <button id="tariffPdfLink" type="button" class="no-print" onclick="openTariffPdf()" title="Tariff (Fee Scale) PDF 보기" style="flex-shrink:0;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;text-decoration:none;font-size:11px;font-weight:600;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.35);white-space:nowrap;cursor:pointer;">
       <span style="font-size:14px;line-height:1;">📄</span><span>Tariff PDF</span>
     </button>
@@ -2592,6 +2607,116 @@ function closeTariffPdf(){
 document.addEventListener('keydown', function(e){
   if(e.key === 'Escape') closeTariffPdf();
 });
+</script>
+<div id="soModal" class="so-overlay no-print" role="dialog" aria-modal="true" aria-labelledby="soTitle">
+  <div class="so-box">
+    <div class="so-head"><div class="t" id="soTitle">Standing Order</div><div class="m" id="soMeta"></div></div>
+    <div class="so-body" id="soBody"></div>
+    <div class="so-foot">
+      <button class="btn btn-primary" onclick="soAck()">확인했습니다</button>
+      <div class="sub">근무일(주말·공휴일 제외)마다 처음 접속 시 표시됩니다.</div>
+    </div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STANDING ORDER 팝업 — 구글 시트(웹에 게시한 CSV)에서 공지를 읽어 근무일마다 표시
+// ═══════════════════════════════════════════════════════════════
+// ▼ 구글 시트 [파일 > 공유 > 웹에 게시 > CSV]로 받은 주소를 아래에 붙여넣으세요. 비워두면 기능이 꺼집니다.
+const NOTICE_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfBEWZaolFJHxteK0aP9pJrTAwFD7PrWznfj55AmKnP8iogFo8cz2MztHsR1K1vVfPCRb1jl-w5pRK/pub?gid=0&single=true&output=csv';
+
+let soNotice = null;
+
+function soLS(get, key, val){
+  try { if(get) return localStorage.getItem(key); localStorage.setItem(key, val); } catch(e) { return null; }
+}
+// 한국 시간(KST) 기준 오늘 날짜와 요일
+function soTodayKST(){
+  const d = new Date(Date.now() + 9*3600*1000);
+  return { ymd: d.toISOString().slice(0,10), dow: d.getUTCDay() };
+}
+function soIsWorkday(today, holidays){
+  if(today.dow === 0 || today.dow === 6) return false;
+  return !holidays.includes(today.ymd);
+}
+// 따옴표 안의 쉼표·줄바꿈(셀 안 Alt+Enter)을 처리하는 CSV 파서
+function soParseCSV(text){
+  const rows = []; let row = [], cell = '', q = false;
+  text = text.replace(/^\uFEFF/, '');
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if(c === '"') q = true;
+    else if(c === ',') { row.push(cell); cell = ''; }
+    else if(c === '\n' || c === '\r') {
+      if(c === '\r' && text[i+1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += c;
+  }
+  if(cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+// 시트 형식: A열 항목(active/id/title/date/message/holiday), B열 값, C열 비고(무시)
+function soFromRows(rows){
+  const n = { active:false, id:'', title:'Standing Order', date:'', message:'', holidays:[] };
+  for(const r of rows){
+    const k = (r[0]||'').trim().toLowerCase(), v = (r[1]||'').trim();
+    if(!k) continue;
+    if(k === 'active') n.active = /^(true|y|yes|1|on|사용|켜기)$/i.test(v);
+    else if(k === 'id') n.id = v;
+    else if(k === 'title') n.title = v || n.title;
+    else if(k === 'date') n.date = v;
+    else if(k === 'message') n.message = (r[1]||'').replace(/\r\n/g,'\n').trim();
+    else if(k === 'holiday' && /^\d{4}-\d{2}-\d{2}$/.test(v)) n.holidays.push(v);
+  }
+  if(!n.id) n.id = n.date + '|' + n.message.length;   // id를 비워둔 경우 대비
+  return n;
+}
+async function soFetch(){
+  const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 7000);
+  try {
+    const url = NOTICE_CSV_URL + (NOTICE_CSV_URL.includes('?') ? '&' : '?') + '_t=' + Date.now();
+    const res = await fetch(url, { cache:'no-store', signal: ctl.signal });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const n = soFromRows(soParseCSV(await res.text()));
+    soLS(false, 'soNoticeCache', JSON.stringify(n));
+    return n;
+  } catch(e) {
+    // 오프라인 등으로 못 읽으면 마지막으로 받은 공지를 사용
+    try { return JSON.parse(soLS(true, 'soNoticeCache') || 'null'); } catch(_) { return null; }
+  } finally { clearTimeout(tm); }
+}
+function soEsc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function soShow(manual){
+  if(!soNotice) return;
+  document.getElementById('soTitle').textContent = soNotice.title || 'Standing Order';
+  document.getElementById('soMeta').textContent = [soNotice.id && !soNotice.id.includes('|') ? soNotice.id : '', soNotice.date].filter(Boolean).join(' · ');
+  // URL은 눌러서 열 수 있게 링크로 표시
+  document.getElementById('soBody').innerHTML = soEsc(soNotice.message)
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  document.getElementById('soModal').classList.add('open');
+}
+function soAck(){
+  if(soNotice) soLS(false, 'soAck', JSON.stringify({ id: soNotice.id, day: soTodayKST().ymd }));
+  document.getElementById('soModal').classList.remove('open');
+}
+// 표시 조건: 새 공지(id 변경)는 날짜와 관계없이 즉시, 같은 공지는 근무일마다 첫 접속 시 1회
+function soShouldShow(n, today, ack){
+  if(!n || !n.active || !n.message) return false;
+  if(!ack || ack.id !== n.id) return true;
+  return soIsWorkday(today, n.holidays) && ack.day !== today.ymd;
+}
+async function soInit(){
+  if(!NOTICE_CSV_URL) return;
+  soNotice = await soFetch();
+  if(!soNotice || !soNotice.active || !soNotice.message) return;
+  document.getElementById('soBtn').style.display = 'flex';
+  let ack = null; try { ack = JSON.parse(soLS(true, 'soAck') || 'null'); } catch(e) {}
+  if(soShouldShow(soNotice, soTodayKST(), ack)) soShow(false);
+}
+soInit();
 </script>
 </body>
 </html>
