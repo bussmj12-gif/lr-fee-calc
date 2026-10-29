@@ -2777,7 +2777,7 @@ function soSpeak(){
   if(!soTTSSupported() || !soNotice) return;
   speechSynthesis.cancel();
   const voice = soChooseVoice();
-  const parts = soChunks((soNotice.title || 'Standing Order') + '.\n' + soNotice.message);
+  const parts = soChunks(soNotice.message);   // 제목(Standing Order)은 읽지 않고 본문만
   if(!parts.length) return;
   soSetSpeaking(true);
   parts.forEach((t, i) => {
