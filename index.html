@@ -197,9 +197,19 @@ select:focus, input[type=number]:focus { outline: none; border-color: var(--prim
 .so-body { padding:18px; overflow:auto; font-size:14px; line-height:1.7; color:var(--text); white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
 .so-foot { padding:12px 18px 16px; border-top:1px solid var(--border); }
 .so-foot .btn { width:100%; }
+.so-actions { display:flex; gap:8px; }
+.so-actions .btn-primary { flex:1; }
+.so-icon { flex:0 0 auto !important; width:46px !important; padding:0 !important; font-size:18px; background:#fff; border:1px solid var(--border); border-radius:8px; cursor:pointer; }
+.so-icon.on { background:#eef5fb; border-color:var(--primary); }
+.so-voice { display:none; margin-top:10px; }
+.so-voice.open { display:block; }
+.so-voice select { width:100%; padding:8px; font-size:13px; border:1px solid var(--border); border-radius:6px; background:#fff; }
+.so-voice .row { display:flex; gap:8px; align-items:center; margin-top:6px; font-size:12px; color:var(--text2); }
+#soStop { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:1200; display:none; align-items:center; gap:8px; background:#1f2937; color:#fff; border:none; border-radius:24px; padding:10px 18px; font-size:14px; font-weight:600; box-shadow:0 6px 20px rgba(0,0,0,.3); cursor:pointer; }
+#soStop.show { display:flex; }
 .so-foot .sub { font-size:11px; color:var(--text2); text-align:center; margin-top:8px; }
 #soBtn { flex-shrink:0; display:none; align-items:center; gap:6px; background:rgba(255,255,255,.14); color:#fff; font-size:11px; font-weight:600; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.35); white-space:nowrap; cursor:pointer; margin-right:6px; }
-@media print { .so-overlay, #soBtn { display:none !important; } }
+@media print { .so-overlay, #soBtn, #soStop { display:none !important; } }
 @media (max-width:500px){ #soBtn span:last-child, #tariffPdfLink span:last-child { display:none; } #soBtn, #tariffPdfLink { padding:8px 10px !important; } }
 /* ── Voice search ── */
 .voice-fab { position: fixed; right: 20px; bottom: 24px; width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 26px; box-shadow: 0 4px 14px rgba(10,92,158,.35); cursor: pointer; z-index: 900; display: flex; align-items: center; justify-content: center; }
@@ -2608,13 +2618,22 @@ document.addEventListener('keydown', function(e){
   if(e.key === 'Escape') closeTariffPdf();
 });
 </script>
+<button id="soStop" class="no-print" onclick="soStopSpeak()">🔇 음성 중지</button>
 <div id="soModal" class="so-overlay no-print" role="dialog" aria-modal="true" aria-labelledby="soTitle">
   <div class="so-box">
     <div class="so-head"><div class="t" id="soTitle">Standing Order</div><div class="m" id="soMeta"></div></div>
     <div class="so-body" id="soBody"></div>
     <div class="so-foot">
-      <button class="btn btn-primary" onclick="soAck()">확인했습니다</button>
-      <div class="sub">근무일(주말·공휴일 제외)마다 처음 접속 시 표시됩니다.</div>
+      <div class="so-actions">
+        <button class="btn so-icon" id="soSpeakBtn" onclick="soToggleSpeak()" title="듣기" aria-label="공지 듣기">🔊</button>
+        <button class="btn so-icon" id="soVoiceBtn" onclick="soToggleVoicePanel()" title="목소리 선택" aria-label="목소리 선택">⚙</button>
+        <button class="btn btn-primary" onclick="soAck()">확인했습니다</button>
+      </div>
+      <div class="so-voice" id="soVoicePanel">
+        <select id="soVoiceSel" onchange="soPickVoice(this.value)" aria-label="목소리"></select>
+        <div class="row">이 기기에 설치된 한국어 목소리입니다. 선택하면 이 기기에 저장됩니다.</div>
+      </div>
+      <div class="sub" id="soSub">근무일(주말·공휴일 제외)마다 처음 접속 시 표시됩니다. 확인을 누르면 음성으로 안내합니다.</div>
     </div>
   </div>
 </div>
@@ -2660,7 +2679,7 @@ function soParseCSV(text){
 }
 // 시트 형식: A열 항목(active/id/title/date/message/holiday), B열 값, C열 비고(무시)
 function soFromRows(rows){
-  const n = { active:false, id:'', title:'Standing Order', date:'', message:'', holidays:[] };
+  const n = { active:false, id:'', title:'Standing Order', date:'', message:'', holidays:[], speak:true, voice:'female', rate:1.0, pitch:1.1 };
   for(const r of rows){
     const k = (r[0]||'').trim().toLowerCase(), v = (r[1]||'').trim();
     if(!k) continue;
@@ -2670,6 +2689,11 @@ function soFromRows(rows){
     else if(k === 'date') n.date = v;
     else if(k === 'message') n.message = (r[1]||'').replace(/\r\n/g,'\n').trim();
     else if(k === 'holiday' && /^\d{4}-\d{2}-\d{2}$/.test(v)) n.holidays.push(v);
+    // 음성 설정 (줄이 없으면 기본값: 읽기 켬, 여성, 속도 1.0, 높낮이 1.1)
+    else if(k === 'speak') n.speak = !/^(false|n|no|0|off|끄기)$/i.test(v);
+    else if(k === 'voice') n.voice = /^(male|m|남|남성)$/i.test(v) ? 'male' : 'female';
+    else if(k === 'rate'  && !isNaN(parseFloat(v))) n.rate  = Math.min(2, Math.max(0.5, parseFloat(v)));
+    else if(k === 'pitch' && !isNaN(parseFloat(v))) n.pitch = Math.min(2, Math.max(0, parseFloat(v)));
   }
   if(!n.id) n.id = n.date + '|' + n.message.length;   // id를 비워둔 경우 대비
   return n;
@@ -2696,12 +2720,108 @@ function soShow(manual){
   // URL은 눌러서 열 수 있게 링크로 표시
   document.getElementById('soBody').innerHTML = soEsc(soNotice.message)
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  soAutoShown = !manual;
+  const canSpeak = soTTSSupported() && soNotice.speak !== false;
+  document.getElementById('soSpeakBtn').style.display = canSpeak ? '' : 'none';
+  document.getElementById('soVoiceBtn').style.display = canSpeak ? '' : 'none';
+  document.getElementById('soVoicePanel').classList.remove('open');
+  document.getElementById('soSub').textContent = '근무일(주말·공휴일 제외)마다 처음 접속 시 표시됩니다.' + (canSpeak ? ' 확인을 누르면 음성으로 안내합니다.' : '');
   document.getElementById('soModal').classList.add('open');
 }
+// "확인했습니다": 확인 기록 저장 + (자동으로 뜬 팝업이면) 음성 안내 시작
+// ※ 브라우저는 사용자가 누른 순간에만 소리를 허용하므로 클릭 처리 안에서 바로 speak를 호출해야 한다(iPhone 필수).
 function soAck(){
   if(soNotice) soLS(false, 'soAck', JSON.stringify({ id: soNotice.id, day: soTodayKST().ymd }));
   document.getElementById('soModal').classList.remove('open');
+  if(soAutoShown && soNotice && soNotice.speak !== false && !soSpeaking) soSpeak();
+  soAutoShown = false;
 }
+
+// ── 음성 안내 (Web Speech API: 기기에 설치된 목소리 사용) ──
+let soAutoShown = false, soSpeaking = false;
+const SO_FEMALE = /sunhi|heami|yuna|sora|yuri|jimin|seohyeon|seoyeon|heera|google 한국|female|여성|여자/i;
+const SO_MALE   = /injoon|hyunsu|bongjin|gookmin|minsang|\bmale\b|남성|남자/i;   // \b: 'female' 안의 'male'은 제외
+function soTTSSupported(){ return 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'; }
+function soKoVoices(){
+  if(!soTTSSupported()) return [];
+  return speechSynthesis.getVoices().filter(v => /^ko(-|_|$)/i.test(v.lang));
+}
+// 목소리 선택 순서: ① 이 기기에서 직접 고른 목소리 ② 시트에 지정한 성별 ③ 아무 한국어 목소리
+function soChooseVoice(){
+  const vs = soKoVoices();
+  if(!vs.length) return null;
+  const saved = soLS(true, 'soVoiceName');
+  if(saved){ const v = vs.find(x => x.name === saved); if(v) return v; }
+  const want = (soNotice && soNotice.voice === 'male') ? SO_MALE : SO_FEMALE;
+  const avoid = (soNotice && soNotice.voice === 'male') ? SO_FEMALE : SO_MALE;
+  const natural = v => /natural|online|neural|premium|enhanced/i.test(v.name) ? 1 : 0;   // 자연스러운 AI 음성 우선
+  const cand = vs.filter(v => want.test(v.name) && !avoid.test(v.name));
+  if(cand.length) return cand.sort((a,b)=>natural(b)-natural(a))[0];
+  const neutral = vs.filter(v => !avoid.test(v.name));   // 이름으로 성별을 알 수 없는 목소리
+  return (neutral.length ? neutral : vs).sort((a,b)=>natural(b)-natural(a))[0];
+}
+// 긴 문장을 한 번에 읽으면 Chrome에서 중간에 끊기는 문제가 있어 줄·문장 단위로 나눠 읽는다
+function soChunks(text){
+  // 줄(항목)마다 따로 읽어 항목 사이에 자연스러운 쉼을 두고, 한 줄이 길면 문장 단위로 다시 나눈다
+  // "1." 같은 번호의 마침표에서 끊기지 않도록 숫자 뒤 마침표는 문장 끝으로 보지 않는다
+  return String(text).split(/\n+/).map(t => t.trim()).filter(Boolean).flatMap(line => {
+    if(line.length <= 140) return [line];
+    const sents = line.match(/(?:\d+\.|[^.!?。])+[.!?。]?/g) || [line];
+    return sents.map(t => t.trim()).filter(Boolean).reduce((acc, t) => {
+      const last = acc[acc.length-1];
+      if(last && (last + ' ' + t).length <= 140) acc[acc.length-1] = last + ' ' + t; else acc.push(t);
+      return acc; }, []);
+  });
+}
+function soSpeak(){
+  if(!soTTSSupported() || !soNotice) return;
+  speechSynthesis.cancel();
+  const voice = soChooseVoice();
+  const parts = soChunks((soNotice.title || 'Standing Order') + '.\n' + soNotice.message);
+  if(!parts.length) return;
+  soSetSpeaking(true);
+  parts.forEach((t, i) => {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = voice ? voice.lang : 'ko-KR';
+    if(voice) u.voice = voice;
+    u.rate = soNotice.rate || 1.0;
+    u.pitch = soNotice.pitch != null ? soNotice.pitch : 1.1;
+    if(i === parts.length - 1) { u.onend = () => soSetSpeaking(false); }
+    u.onerror = () => soSetSpeaking(false);
+    speechSynthesis.speak(u);
+  });
+}
+function soStopSpeak(){ if(soTTSSupported()) speechSynthesis.cancel(); soSetSpeaking(false); }
+function soToggleSpeak(){ soSpeaking ? soStopSpeak() : soSpeak(); }
+function soSetSpeaking(on){
+  soSpeaking = on;
+  document.getElementById('soStop').classList.toggle('show', on);
+  const b = document.getElementById('soSpeakBtn');
+  if(b){ b.classList.toggle('on', on); b.textContent = on ? '⏹' : '🔊'; b.title = on ? '중지' : '듣기'; }
+}
+function soFillVoices(){
+  const sel = document.getElementById('soVoiceSel');
+  if(!sel) return;
+  const vs = soKoVoices(), cur = soChooseVoice();
+  if(!vs.length){ sel.innerHTML = '<option value="">이 기기에 한국어 목소리가 없습니다 (기본 음성 사용)</option>'; return; }
+  sel.innerHTML = vs.map(v => `<option value="${soEsc(v.name)}"${cur && v.name===cur.name?' selected':''}>${soEsc(v.name)}</option>`).join('');
+}
+function soToggleVoicePanel(){
+  const p = document.getElementById('soVoicePanel');
+  soFillVoices();
+  p.classList.toggle('open');
+}
+function soPickVoice(name){
+  soLS(false, 'soVoiceName', name);
+  soSpeak();   // 고른 목소리로 바로 들려주기
+}
+if(soTTSSupported()){
+  speechSynthesis.getVoices();   // Chrome은 목소리 목록을 늦게 불러오므로 미리 요청
+  speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', () => {
+    if(document.getElementById('soVoicePanel').classList.contains('open')) soFillVoices();
+  });
+}
+window.addEventListener('pagehide', () => { if(soTTSSupported()) speechSynthesis.cancel(); });
 // 표시 조건: 새 공지(id 변경)는 날짜와 관계없이 즉시, 같은 공지는 근무일마다 첫 접속 시 1회
 function soShouldShow(n, today, ack){
   if(!n || !n.active || !n.message) return false;
